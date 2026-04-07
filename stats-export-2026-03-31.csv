@@ -1,0 +1,81 @@
+﻿N° Ticket,Titre,Statut,Date d'ouverture,Priorité,Demandeur,Attribué à,Équipement /Module,Numéro de série,Site ,Action(s),Date de résolution,Commentaire
+R-000036,TITRE1,Cloturé,21/02/22,Moyenne,Rachid,BE Youssef,2026-ABC,020HX0T,SAPINO ,Action1,?,comment 1
+R-000037,TITRE2,Cloturé,7/4/2022,Moyenne,Rachid,BE Youssef,ED-DCX8510-8B,B2FHXX1950L00N,SAPINO ,Action2,6/7/2022,comment 2
+R-000038,TITRE3,Cloturé,7/4/2022,Moyenne,Rachid,BE Youssef,ED-DCX8510-8B,B2FHXX1950L00K,SAPINO ,Action3,6/7/2022,comment 3
+R-000039,TITRE4,Cloturé,7/4/2022,Moyenne,Rachid,BE Youssef, ED-DCX8510-8B,B2FHXX1950L00K,SAPINO ,Action4,4/7/2022,comment 4
+R-000040,TITRE5,Cloturé,7/4/2022,Moyenne,Hassan,BE Youssef,2498-B80,121HX1A,MARRAKECH,Action5,5/8/2022,comment 5
+R-000041,TITRE6,Cloturé,7/4/2022,Critique ,Hassan,BE Youssef,2026-YEN,020HX9R,MARRAKECH,Action6,11/10/2022,comment 6
+R-000042,TITRE7,Cloturé,15/07/22,Moyenne,Rachid,BE Youssef,4671-WXW,024HXEP,SAPINO ,Action7,?,comment 7
+R-000043,TITRE8,Cloturé,27/07/22,Moyenne,Rachid,BE Youssef,PPRDP,024HXDP ,SAPINO ,Action8,2/8/2022,comment 8
+R-000044,TITRE9,Cloturé,27/07/22,Moyenne,Rachid,BE Youssef,PPRxneP,024HXEP ,SAPINO ,Action9,17/08/2022,comment 9
+R-000045,TITRE10,Cloturé,8/10/2022,Moyenne,Rachid,BE Youssef,PPROxjneijnP,024HXDP ,SAPINO ,Action10,17/08/2022,comment 10
+R-000046,TITRE11,Cloturé,19/09/22,Moyenne,Rachid,BE Youssef,PPxhefbeuhP,024HXDP ,SAPINO ,Action11,?,comment 11
+R-000047,TITRE12,Cloturé,9/5/2022,Moyenne,Hassan,BE Youssef,CHF ZE6721 ,729HX88,SAPINO ,Action12, 23/09/2022 ,comment 12
+R-000048,TITRE13,Cloturé,9/6/2022,Critique ,Hassan,BE Youssef, P743noe77,22BHX77,SAPINO ,Action13,"23/09/2022
+",comment 13
+R-000049,TITRE14,Cloturé,14/09/22,Critique ,Rachid,BE Youssef, P7jnxein6T ,02BHX6T ,SAPINO ,Action14,"24/12/2022
+",comment 14
+R-000050,TITRE15,Cloturé,19/09/22,Moyenne,Hassan,BE Youssef,Pnx eijnjuhxeT,020HX0T,SAPINO ,Action15,15/09/2022,comment 15
+R-000051,TITRE16,Cloturé,19/09/22,Moyenne,Hassan,BE Youssef,PPxkjexekj4DP ,6a4HX024D87P ,SAPINO ,Action16,?,comment 16
+R-000052,TITRE17,Cloturé,22/09/22,Moyenne,Rachid,BE Youssef,HMxejni943 ,6a4HX021D87C,SAPINO ,Action17,11/5/2023,comment 17
+R-000053,TITRE18,Cloturé,21/09/22,Moyenne,Rachid,BE Youssef,L2A Expansion,6a4HX72CA87C,SAPINO ,Action18,22/09/2022,comment 18
+R-000054,TITRE19,Cloturé,22/09/22,Moyenne,Rachid,BE Youssef,L2A Expansion,6a4HX72CH87G,SAPINO ,Action19,22/09/2022,comment 19
+R-000055,TITRE20,Cloturé,9/5/2022,Moyenne,Rachid,BE Youssef,CHF ZE6721 ,6a4HXn2co87mmuniqué ,SAPINO ,Action20,11/5/2023,comment 20
+R-000056,TITRE21,Cloturé ,10/12/2022,Critique,Hassan,HA Ayoub, NODE-2_,6a4HX020987R ,MARRAKECH ,Action21,"15/02/2023
+",comment 21
+R-000057,TITRE22,Cloturé,29/11/22,Critique,Hassan,HA Ayoub,P780SOC2-2026-ABC-,6a4HX020087T,SAPINO ,Action22,9/2/2023,comment 22
+R-000058,TITRE23,Cloturé ,26/12/22,Critique,Rachid,HA Ayoub,P780SOC1-2026-ABC-,6a4HX02B687T,SAPINO ,Action23,27/02/2023,comment 23
+R-000059,TITRE24,Cloturé,26/12/2023,Critique,Hassan,HA Ayoub,7820D9B-L2A_VTL,6a4HX222487F,SAPINO ,Action24,"02/01/2023
+",comment 24
+R-000060,TITRE25,Cloturé,16/02/2023,Critique,Hassan,HA Ayoub,NODE-2_,6a4HX020987R,MARRAKECH ,Action25,"05/06/2023
+",comment 25
+R-000061,TITRE26,Cloturé,16/2/2023,Critique,Hassan,HA Ayoub,9197-YEN-,6a4HX020287R,MARRAKECH ,Action26,12/5/2023,comment 26
+R-000062,TITRE27,Cloturé,23/2/2023,Critique,Hassan,HA Ayoub,P780SOC2-2026-ABC,6a4HX020087T,SAPINO ,Action27,2/9/2023,comment 27
+R-000063,TITRE28,Cloturé,27/2/2023,Critique,Hassan,HA Ayoub,PRESOC PPPRD2_Server-4671-WXW,6a4HX024F87P,SAPINO ,Action28,"17/06/2023
+",comment 28
+R-000064,TITRE29,Cloturé,7/2/2023,Critique,Hassan,HA Ayoub,Server Power 7 P770-INEOS-4671-BMW,6a4HX22B7877,SAPINO ,Action29,3/7/2023,comment 29
+R-000065,TITRE30,Cloturé,8/2/2023,Critique,Hassan,HA Ayoub,PRESOC PPPRD2_Server-4671-WXW,6a4HX024F87P,SAPINO ,Action30,"02/08/2023
+",comment 30
+R-000066,TITRE31,Cloturé,22/8/2023,Moyenne,Hassan,BE Youssef, P770-INEOS-4671-BMW,6a4HX2sw287B77,SAPINO ,Action31,"24/08/2023
+",comment 31
+R-000067,TITRE32,Cloturé,4/9/2023,Moyenne,Rachid,BE Youssef,P780SOC2-2026-ABC,6a4HX0sw28700T,SAPINO ,Action32,12/11/2023,comment 32
+R-000068,TITRE33,Cloturé,9/5/2023,Moyenne,Rachid,BE Youssef,P780SOC2-2026-ABC,6a4HX0sw28700T,SAPINO ,Action33,12/11/2023,comment 33
+R-000069,TITRE34,Cloturé,10/11/2023,Moyenne,Rachid,BE Youssef,PPRD1_Server-4671-WXW-,6a4HX0sw2874EP,SAPINO ,Action34,14/12/2023,comment 34
+R-000070,TITRE35,Cloturé,10/11/2023,Moyenne,Rachid,BE Youssef,PSOC_Server-4671-WXW-,6a4HX0sw2874DP ,SAPINO ,Action35,20/10/2023,comment 35
+R-000071,TITRE36,Cloturé, 20/10/2023,Critique,Hassan,BE Youssef,PSOC_Server-4671-WXW-,6a4HX0sw2874DP,SAPINO ,Action36, 20/10/2023,comment 36
+R-000072,TITRE37,Cloturé,25/10/2023,Moyenne,Rachid,BE Youssef,PSOC_Server-4671-WXW-,6a4HX0sw2874DP ,SAPINO ,Action37,2/6/2023,comment 37
+R-000073,TITRE38,Cloturé,15/11/2023,Moyenne,Hassan,BE Youssef,CHF ZE6721 ,6a4HX7sw287988,SAPINO ,Action38, 17/11/2023,comment 38
+R-000074,TITRE39,Cloturé,15/11/2023,Moyenne,Hassan,BE Youssef, Power ESCALA P7_06B902R,6a4HX0sw28702R ,MARRAKECH,Action39, 23/11/2023,comment 39
+R-000075,TITRE40,Cloturé,17/11/2023,Moyenne,Rachid,BE Youssef,PRD1_Server-4671-WXW,6a4HX0sw2874EP,SAPINO ,Action40, 17/11/2023,comment 40
+R-000076,TITRE41,Cloturé, 23/11/2023,Moyenne,Hassan,BE Youssef, Power ESCALA P7_06B90AR,6a4020swA87R,MARRAKECH,Action41, 23/11/2023,comment 41
+R-000077,TITRE42,Cloturé,31/02/2024,Moyenne,Hassan,BE Youssef, Power ESCALA P7_06B90AR,6a4020swA87R,MARRAKECH,Action42,2/1/2024,comment 42
+R-000077 (dupliquée ),TITRE43,Cloturé,5/1/2024,Critique,Rachid,BE Youssef,PPRD1_Server-4671-WXW-,6a4024swE87P,SAPINO ,Action43,13/5/2024,comment 43
+R-000078,TITRE44,Cloturé,5/2/2024,Moyenne,Rachid,BE Youssef,PPRD1_Server-4671-WXW-,6a4024swE87P,SAPINO ,Action44,13/5/2024,comment 44
+R-000079,TITRE45,Cloturé,6/6/2024,Moyenne,Rachid,BE Youssef,PRD1_880-9119-SDX-,6a422Fsw9877,SAPINO ,Action45,6/7/2024,comment 45
+R-000080,TITRE46,Cloturé,12/6/2024,Moyenne,Rachid,BE Youssef,CHF ZE6721 ,6a4729sw8878,SAPINO ,Action46,20/06/2024,comment 46
+R-000081,TITRE47,Cloturé,9/7/2024,Critique,Rachid,BE MUSTAFA, PPRD2_Server-4671-WXW-,6a4024swF87P,SAPINO ,Action47,7/10/2024,comment 47
+R-000082,TITRE48,Cloturé,19/09/24,Critique,Rachid,BE Youssef,P770-INEOS-4671-BMW-,6a422Bsw7877 ,SAPINO ,Action48,20/09/24,comment 48
+R-000083,TITRE49,Cloturé,19/09/24,Moyenne,Rachid,BE Youssef, P780SOC1-2026-ABC-,6a402Bsw687T,SAPINO ,Action49,20/09/24,comment 49
+R-000084,TITRE50,Clôturé,23/10/24,Moyenne,Rachid,BE Youssef,CHF ZE6721 ,6a4729sw8878,SAPINO ,Action50,11/4/2025,comment 50
+R-000085,TITRE51,Cloturé,21/11/24,Critique ,Rachid,BE Youssef,4671-BMW,6a422Bsw7877,SAPINO ,Action51,25/11/24,comment 51
+R-000086,TITRE52,Cloturé,25/11/24,Critique ,Rachid,BE Youssef,2026-ABC,6a4020sw087T,SAPINO ,Action52,-,comment 52
+R-000087,TITRE53,Cloturé,2/12/2024,Moyenne,Rachid,BE Youssef,4671-WXW,6a4024swF87P,SAPINO ,Action53,2/12/2024,comment 53
+R-000088,TITRE54,Cloturé,29/05/25,Moyenne,Rachid,BE Youssef,CHF ZE6721 ,6a4729sw8878,SAPINO ,Action54,1/7/2025,comment 54
+R-000089,TITRE55,Cloturé,9/4/2025,Moyenne,Rachid,BE Youssef,LAN768B 2,6a4122swH87K,SAPINO ,Action55,9/4/2025,comment 55
+R-000090,TITRE56,Cloturé,10/4/2025,Critique,Rachid,BE Youssef,- ,6a4-2 sw 87,SAPINO ,Action56,19/04/25,comment 56
+R-000091,TITRE57,Cloturé,20/07/25,Moyenne,Rachid,BE Youssef,ZE6721,6a4729sw8878,SAPINO ,Action57, 02/10/25,comment 57
+R-000092,TITRE58,Cloturé,2/7/2025,Moyenne,Rachid,BE Youssef,4671-WXW,6a4024swD87P,SAPINO ,Action58,24/09/25,comment 58
+R-000093,TITRE59,Cloturé,13/08/25,Moyenne,Rachid,BE Youssef,CHF ZE6721 ,6a4729sw8878,SAPINO ,Action59,22/07/25,comment 59
+R-000094,TITRE60,Clôturé,22/09/25,Moyenne,Rachid,BE Youssef,4671-WXW,6a4024swD87P ,SAPINO ,Action60,1/10/2025,comment 60
+R-000095,TITRE61,Ouvert ,14/11/25,Moyenne,Rachid,BE Youssef,2026-YEN,6a4020sw987R,MARRAKECH,Action61,-,comment 61
+R-000096,TITRE62,Cloturé,12/11/2025,Moyenne,Rachid,BE Youssef,SW LAN 5I00,6a4A29sw3874D018,MARRAKECH,Action62,9/12/2025,comment 62
+R-000097,TITRE63,Clôturé,14/11/25,Moyenne,Rachid,BE Youssef,CHF ZE6721 ,6a4729sw8878,SAPINO ,Action63,21/11/25,comment 63
+R-000098,TITRE64,Cloturé,14/11/25,Moyenne,Rachid,BE Youssef,CHF BRU6721,6a4723sw4874,MARRAKECH,Action64,9/12/2025,comment 64
+R-000099,TITRE65,Clôturé,1/12/2025,Moyenne,Rachid,BE Youssef,AIX,6a4L2 sw(87OAPDB),SAPINO ,Action65,2/12/2025,comment 65
+R-000100,TITRE66,Clôturé,13/01/25,Critique,Rachid,BE Youssef,8205-E6B,6a402Fsw887P,SAPINO ,Action66,13/01/25,comment 66
+R-000101,TITRE67,Clôturé,15/01/26,Critique,Rachid,BE Youssef,4671-WXW,6a4024swD87P ,SAPINO ,Action67,19/01/26,comment 67
+R-000102,TITRE68,Clôturé,29/01/26,Moyenne,Rachid,BE Youssef,CHF 7042-CR6,6a4021swD87C,SAPINO ,Action68,12/2/2026,comment 68
+R-000103,TITRE69,Ouvert ,29/01/26,Critique,Rachid,BE Youssef,2026-YEN,6a4020swA87R,MARRAKECH,Action69,Première  intervention      le 02/02/2026,comment 69
+R-000104,TITRE70,Clôturé,24/02/26,Moyenne,Rachid,BE Youssef,880-9119-SDX,6a422FswA877,SAPINO ,Action70,27/02/26,comment 70
+R-000105,TITRE71,Clôturé,12/3/2026,Moyenne,Rachid,BE Youssef,2026-dne,6a4020sw087T,SAPINO ,Action71,17/03/26,comment 71
+R-000106,TITRE72,Clôturé,19/03/26,Moyenne,Rachid,BE Youssef,JHQD GHT connectrix,,SAPINO ,Action72,31/03/26,comment 72
