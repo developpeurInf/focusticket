@@ -101,7 +101,8 @@ export default function CreateTicketForm({ ticket, onSuccess }: { ticket?: any, 
       actionPlan: ticket?.actionPlan || "",
       resolvedAt: ticket?.resolvedAt || "",
       comment: ticket?.comment || "",
-      createdAt: ticket?.createdAt || new Date().toISOString().split('T')[0],
+      // Date du jour en heure locale (toISOString donnait la veille entre minuit et 1 h au Maroc)
+      createdAt: ticket?.createdAt || new Date().toLocaleDateString('en-CA'),
     },
   });
 

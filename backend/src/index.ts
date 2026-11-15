@@ -182,6 +182,28 @@ function readDateParam(value: any, endOfDay = false): Date | undefined {
   return date;
 }
 
+// Date d'ouverture d'un ticket à la création.
+// Le formulaire n'envoie qu'une date (AAAA-MM-JJ) : convertie telle quelle, elle donnait minuit,
+// et le nouveau ticket passait derrière tous les tickets du jour dans la liste triée par date.
+// On conserve donc le jour choisi en y ajoutant l'heure actuelle.
+function parseTicketCreatedAt(value: any): Date | undefined {
+  if (!value) return undefined;
+  const raw = String(value).trim();
+  const dateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnly) {
+    const now = new Date();
+    const date = new Date(
+      Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]),
+      now.getHours(), now.getMinutes(), now.getSeconds(), now.getMilliseconds()
+    );
+    if (isNaN(date.getTime())) return undefined;
+    // Jour courant (ou date future saisie par erreur) : on prend simplement maintenant
+    return date.getTime() > now.getTime() ? now : date;
+  }
+  const date = new Date(raw);
+  return isNaN(date.getTime()) ? undefined : date;
+}
+
 // Construit le filtre Prisma des tickets à partir des paramètres de requête
 function buildTicketWhere(query: any) {
   const and: any[] = [];
@@ -500,7 +522,7 @@ app.post('/api/tickets', async (req, res) => {
         assetId: resolvedAssetId,
         comment: comment || null,
         serialNumber: finalSerialNumber || null,
-        createdAt: (createdAt && !isNaN(new Date(createdAt).getTime())) ? new Date(createdAt) : undefined,
+        createdAt: parseTicketCreatedAt(createdAt),
         resolvedAt: (resolvedAt && typeof resolvedAt === 'string' && resolvedAt.trim() !== "")
           ? (isNaN(new Date(resolvedAt).getTime()) ? null : new Date(resolvedAt))
           : null,
