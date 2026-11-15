@@ -69,9 +69,12 @@ const lastInterventionText = (list: Intervention[] | undefined) => {
   if (!list || list.length === 0) return "";
   const last = list[list.length - 1];
   const when = toDate(last.performedAt);
-  const head = [`Étape ${last.stepNumber}`, when ? when.toLocaleDateString("fr-FR") : "", clean(last.technician)].filter(Boolean).join(" · ");
+  const head = [`Étape ${last.stepNumber}`, when ? when.toLocaleDateString("fr-FR") : "", technicianNames(last)].filter(Boolean).join(" · ");
   return `${head} : ${clean(last.actions)}`;
 };
+// Noms des intervenants d'une étape (plusieurs possibles)
+const technicianNames = (i: Intervention) =>
+  i.technicians && i.technicians.length > 0 ? i.technicians.map(t => t.name).join(", ") : clean(i.technician);
 const resolutionDays = (t: Ticket) => {
   const start = toDate(t.createdAt);
   const end = toDate(t.resolvedAt);
@@ -349,7 +352,7 @@ const INTERVENTION_COLUMNS: ColumnDef[] = [
   { header: "Étape", width: 8, align: "center" },
   { header: "Date", width: 12, align: "center", numFmt: "dd/mm/yyyy" },
   { header: "Heure", width: 8, align: "center", numFmt: "hh:mm" },
-  { header: "Intervenant", width: 18 },
+  { header: "Intervenant(s)", width: 24, wrap: true },
   { header: "Durée", width: 10, align: "center" },
   { header: "Actions réalisées", width: 50, wrap: true },
   { header: "Constat / résultat", width: 36, wrap: true },
@@ -406,7 +409,7 @@ function buildInterventionsSheet(wb: Workbook, tickets: Ticket[], rowOfTicket: M
         i.stepNumber,
         when,
         when,
-        clean(i.technician),
+        technicianNames(i),
         formatMinutes(i.durationMinutes || 0),
         clean(i.actions),
         clean(i.result),
