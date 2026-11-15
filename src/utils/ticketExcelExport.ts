@@ -180,7 +180,7 @@ function buildSummarySheet(wb: Workbook, tickets: Ticket[], kind: TicketExportKi
 
   const info: [string, string][] = [
     ["Date de l'export", exportedAt.toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" })],
-    ["Filtres appliqués", filterLabels.length ? filterLabels.join(" · ") : "Aucun (tickets archivés exclus)"],
+    ["Filtres appliqués", filterLabels.length ? filterLabels.join(" · ") : "Aucun (tous les tickets, archivés compris)"],
     ["Nombre de tickets", String(tickets.length)],
   ];
   let r = 5;

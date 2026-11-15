@@ -95,6 +95,8 @@ export const exportTickets = async (
     limit: 10000,
     // Les interventions servent aux deux versions (résumé de la dernière étape, temps total)
     includeInterventions: 'true',
+    // Sans filtre de statut, l'export inclut aussi les tickets archivés (contrairement à la liste)
+    includeArchived: 'true',
   });
   return exportTicketsToExcel(res.tickets, kind, filterLabels);
 };

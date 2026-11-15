@@ -398,7 +398,7 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-72">
                 <DropdownMenuLabel className="text-xs text-muted-foreground">
-                  {activeFilterCount > 0 || searchQuery ? "Export des tickets filtrés" : "Export de tous les tickets (hors archivés)"}
+                  {activeFilterCount > 0 || searchQuery ? "Export des tickets filtrés" : "Export de tous les tickets (archivés compris)"}
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="flex-col items-start gap-0.5 py-2" onClick={() => handleExport('synthese')}>
