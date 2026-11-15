@@ -243,13 +243,13 @@ export default function AssetsPage() {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
+    <div className="app-shell relative flex h-[100dvh] w-full overflow-hidden bg-background">
       <Sidebar userRole={userRole} />
 
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header userRole={userRole} onSwitchRole={() => { }} />
 
-        <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
+        <div className="relative flex-1 overflow-auto p-4 md:p-6 space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Inventaire (Parc Informatique)</h1>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

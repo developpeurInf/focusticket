@@ -126,13 +126,13 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
+    <div className="app-shell relative flex h-[100dvh] w-full overflow-hidden bg-background">
       <Sidebar userRole={userRole} />
       
       <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header userRole={userRole} onSwitchRole={setUserRole} />
         
-        <div className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
+        <div className="relative flex-1 overflow-auto p-4 md:p-6 space-y-6">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Paramètres</h1>
             <p className="text-muted-foreground">Configurez la plateforme, les notifications et la sécurité.</p>

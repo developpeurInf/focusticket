@@ -107,7 +107,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
         "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-xl",
         mobileOpen ? "translate-x-0" : "-translate-x-full",
         // Bureau : colonne fixe, repliable
-        "md:static md:z-auto md:max-w-none md:translate-x-0 md:shadow-none",
+        "md:relative md:z-auto md:max-w-none md:translate-x-0 md:shadow-none",
         desktopExpanded ? "md:w-64" : "md:w-16"
       )}
     >

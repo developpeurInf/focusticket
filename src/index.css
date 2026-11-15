@@ -113,6 +113,15 @@
   body {
     @apply bg-background text-foreground transition-colors duration-200;
   }
+
+  /* Pages de l'application : seule la zone de contenu défile, jamais la page entière.
+     Évite l'espace vide qui apparaît en bas quand on fait glisser la souris vers le bas. */
+  html:has(.app-shell),
+  body:has(.app-shell) {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   
   /* Style adjustments for color changes */
   .color-updated button,

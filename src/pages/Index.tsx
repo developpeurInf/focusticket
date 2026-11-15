@@ -47,13 +47,13 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
+    <div className="app-shell relative flex h-[100dvh] w-full overflow-hidden bg-background">
         <Sidebar userRole={userRole} />
         
         <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Header userRole={userRole} onSwitchRole={switchRole} />
           
-          <div className="flex-1 overflow-auto p-4 md:p-6">
+          <div className="relative flex-1 overflow-auto p-4 md:p-6">
             <Tabs value={activeTab} onValueChange={handleTabChange}>
               <TabsList className="mb-4">
                 <TabsTrigger value="overview">Vue d'ensemble</TabsTrigger>
