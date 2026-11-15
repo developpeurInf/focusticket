@@ -389,7 +389,8 @@ function buildInterventionsSheet(wb: Workbook, tickets: Ticket[], rowOfTicket: M
 
     // Étape 0 : plan d'action initial
     const planRow = writeRow(
-      [clean(t.ticketNumber), clean(t.subject), statusLabel(status), 0, toDate(t.createdAt), null, clean(t.createdBy), "",
+      // L'étape 0 n'est pas une intervention : la colonne "Intervenant" reste vide (le demandeur n'est pas un intervenant)
+      [clean(t.ticketNumber), clean(t.subject), statusLabel(status), 0, toDate(t.createdAt), null, "", "",
         t.actionPlan ? `Plan d'action initial :\n${t.actionPlan}` : "Plan d'action initial : non défini", "", "", ""],
       { plan: true }
     );
