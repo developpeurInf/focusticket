@@ -344,10 +344,10 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
   return (
     <Card>
       <CardHeader className="pb-2">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
           <CardTitle>Tickets</CardTitle>
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="relative flex-grow md:flex-grow-0 md:w-64">
+          <div className="flex w-full flex-wrap items-center gap-2 xl:w-auto xl:justify-end">
+            <div className="relative w-full sm:w-64 sm:flex-none">
               <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Chercher des tickets..."
@@ -438,7 +438,7 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
                   Ajouter un ticket
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-2xl">
+              <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Ajouter un nouveau ticket</DialogTitle>
                   <DialogDescription>
@@ -464,11 +464,11 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="rounded-xl border shadow-sm overflow-x-auto border-t-4 border-t-primary bg-card">
+      <CardContent className="px-3 sm:px-6">
+        <div className="rounded-xl border shadow-sm overflow-hidden border-t-4 border-t-primary bg-card">
           <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow className="hover:bg-transparent text-[11px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30">
+            <TableHeader className="bg-muted">
+              <TableRow className="hover:bg-transparent text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                 <TableHead className="w-[40px] px-4">
                   <Checkbox 
                     checked={filteredTickets.length > 0 && selectedIds.length === filteredTickets.length}
@@ -534,7 +534,7 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
                 </TableHead>
                 <TableHead className="whitespace-nowrap px-2">Intervention</TableHead>
                 <TableHead className="whitespace-nowrap px-2">Commentaire</TableHead>
-                <TableHead className="text-right sticky right-0 px-4">Actions</TableHead>
+                <TableHead className="text-right sticky right-0 z-10 bg-muted px-4 shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.25)]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -605,7 +605,7 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
                     </TableCell>
                     <TableCell className="max-w-[150px] truncate text-[11px] px-2 italic font-medium">{ticket.actions || "-"}</TableCell>
                     <TableCell className="max-w-[150px] truncate text-[11px] px-2 italic text-muted-foreground">{ticket.comment || "-"}</TableCell>
-                    <TableCell className="text-right px-4 sticky right-0 bg-background/95 group-hover:bg-primary/5 transition-colors">
+                    <TableCell className="text-right px-4 sticky right-0 z-10 bg-card group-hover:bg-muted transition-colors shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.25)]">
                       <div className="flex justify-end gap-1">
                         <Button 
                           variant="ghost" 
@@ -663,15 +663,15 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
 
       {/* Pagination Controls */}
       {totalTickets > 0 && (
-        <div className="px-6 py-4 border-t border-border bg-muted/20 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="px-3 sm:px-6 py-4 border-t border-border bg-muted/20 flex flex-col lg:flex-row items-center justify-between gap-3 lg:gap-4">
           <div className="text-xs text-muted-foreground font-medium">
             Affichage de <span className="font-bold text-foreground">{Math.min(totalTickets, startIndex + 1)}-{Math.min(totalTickets, startIndex + paginatedTickets.length)}</span> sur <span className="font-bold text-foreground">{totalTickets}</span> tickets
           </div>
           
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground mr-2">Par page :</span>
-            <select 
-              className="bg-background border border-border rounded text-xs p-1 focus:ring-1 focus:ring-primary outline-none cursor-pointer"
+            <select
+              className="h-8 bg-background border border-border rounded-md text-xs px-2 focus:ring-1 focus:ring-primary outline-none cursor-pointer"
               value={itemsPerPage}
               onChange={(e) => {
                 setItemsPerPage(Number(e.target.value));
@@ -703,10 +703,10 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
               onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
               disabled={currentPage === 1 || isLoading}
             >
-              <ChevronLeft className="h-4 w-4" /> Précédent
+              <ChevronLeft className="h-4 w-4" /> <span className="hidden sm:inline">Précédent</span>
             </Button>
             
-            <div className="flex items-center px-4 h-8 bg-background border border-border rounded text-xs font-black shadow-sm">
+            <div className="flex items-center whitespace-nowrap px-3 sm:px-4 h-8 bg-background border border-border rounded-md text-xs font-bold shadow-sm">
               Page {currentPage} / {totalPages || 1}
             </div>
 
@@ -717,7 +717,7 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
               onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
               disabled={currentPage >= totalPages || isLoading}
             >
-              Suivant <ChevronRight className="h-4 w-4" />
+              <span className="hidden sm:inline">Suivant</span> <ChevronRight className="h-4 w-4" />
             </Button>
             <Button 
               variant="outline" 

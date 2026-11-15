@@ -12,16 +12,16 @@ export default function ReportsPage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
         <Sidebar userRole={userRole} />
         
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <Header userRole={userRole} onSwitchRole={switchRole} />
           
           <div className="flex-1 overflow-auto p-4 md:p-6">
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold tracking-tight">Rapports & Statistiques</h1>
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Rapports & Statistiques</h1>
                 <p className="text-muted-foreground">
                   Visualisez les données de support et analysez les performances de votre équipe.
                 </p>

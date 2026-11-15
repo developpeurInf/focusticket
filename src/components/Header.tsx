@@ -1,5 +1,6 @@
 
-import { Bell, MoonIcon, SunIcon } from "lucide-react";
+import { Bell, Menu, MoonIcon, SunIcon } from "lucide-react";
+import { TOGGLE_MOBILE_SIDEBAR_EVENT } from "@/lib/sidebarEvents";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ThemeProvider";
 import { 
@@ -92,13 +93,25 @@ export default function Header({ userRole, onSwitchRole }: HeaderProps) {
 
   return (
     <>
-      <header className="border-b bg-background/80 backdrop-blur-md sticky top-0 z-50 flex justify-between items-center h-20 px-4">
-        <img src="/logo.png" alt="FOCUS NEXT COMPUTING" className="h-12 w-auto rounded object-contain" />
+      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-background/80 px-3 backdrop-blur-md md:h-20 md:px-6">
+        {/* Mobile : bouton menu + logo (sur bureau, le logo est déjà dans le menu latéral) */}
+        <div className="flex min-w-0 items-center gap-2 md:hidden">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() => window.dispatchEvent(new Event(TOGGLE_MOBILE_SIDEBAR_EVENT))}
+            aria-label="Ouvrir le menu"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <img src="/logo.png" alt="FOCUS NEXT COMPUTING" className="h-9 w-auto min-w-0 rounded object-contain dark:bg-white dark:px-1.5 dark:py-0.5" />
+        </div>
 
-        <div className="flex items-center gap-2 pr-4 text-foreground">
+        <div className="ml-auto flex shrink-0 items-center gap-2 text-foreground">
           <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="icon" className="relative group hover:border-primary/50 transition-colors">
+              <Button variant="outline" size="icon" className="relative group rounded-full hover:border-primary/50 transition-colors" aria-label="Notifications">
                 <Bell className="h-5 w-5 group-hover:text-primary transition-colors" />
                 {unreadCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 hover:bg-red-600 animate-in fade-in zoom-in duration-300">
@@ -107,7 +120,7 @@ export default function Header({ userRole, onSwitchRole }: HeaderProps) {
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-[380px] p-0 shadow-2xl border-primary/10">
+            <PopoverContent align="end" className="w-[380px] max-w-[calc(100vw-1.5rem)] p-0 shadow-2xl border-primary/10">
               <div className="p-4 border-b flex items-center justify-between bg-muted/30">
                 <div>
                   <h3 className="font-bold text-base">Notifications</h3>

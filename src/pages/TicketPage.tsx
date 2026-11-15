@@ -8,6 +8,7 @@ import { addNotification } from "@/utils/notificationUtils";
 import TicketDetails from "@/components/TicketDetails";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
+import AppLayout from "@/components/AppLayout";
 
 export default function TicketPage() {
   const { id } = useParams<{ id: string }>();
@@ -69,26 +70,30 @@ export default function TicketPage() {
   
   if (isLoadingTicket) {
     return (
-      <div className="container mx-auto py-6 space-y-4">
+      <AppLayout>
+      <div className="mx-auto max-w-6xl space-y-4">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          <ArrowLeft className="mr-2 h-4 w-4" /> Retour
         </Button>
         <Skeleton className="h-8 w-1/3 mb-4" />
         <Skeleton className="h-64 w-full" />
       </div>
+      </AppLayout>
     );
   }
   
   if (ticketError) {
     return (
-      <div className="container mx-auto py-6 text-center">
+      <AppLayout>
+      <div className="mx-auto max-w-6xl text-center">
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
+          <ArrowLeft className="mr-2 h-4 w-4" /> Retour
         </Button>
         <h1 className="text-2xl font-bold text-destructive">Error Loading Ticket</h1>
         <p className="mt-2">There was a problem loading the ticket information.</p>
         <Button onClick={() => navigate("/")} className="mt-4">Go to Dashboard</Button>
       </div>
+      </AppLayout>
     );
   }
   
@@ -105,9 +110,10 @@ export default function TicketPage() {
   };
   
   return (
-    <div className="container mx-auto py-6">
+    <AppLayout>
+    <div className="mx-auto max-w-6xl">
       <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back
+        <ArrowLeft className="mr-2 h-4 w-4" /> Retour
       </Button>
       
       {ticketData && (
@@ -120,5 +126,6 @@ export default function TicketPage() {
         />
       )}
     </div>
+    </AppLayout>
   );
 }

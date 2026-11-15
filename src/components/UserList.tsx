@@ -218,10 +218,10 @@ export default function UserList({ userRole }: UserListProps) {
     <>
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <CardTitle>Utilisateurs ({allUsers.length})</CardTitle>
-            <div className="flex items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-grow md:flex-grow-0 md:w-64">
+            <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+              <div className="relative w-full sm:w-64 sm:flex-none">
                 <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Chercher un utilisateur..."
@@ -284,10 +284,10 @@ export default function UserList({ userRole }: UserListProps) {
             </div>
           </div>
         </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               <div className="rounded-xl border shadow-sm overflow-hidden border-t-4 border-t-primary bg-card">
                 <Table>
-                   <TableHeader className="bg-muted/50">
+                   <TableHeader className="bg-muted">
                     <TableRow className="hover:bg-transparent text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       <TableHead className="w-[50px]">
                         <Checkbox 
@@ -306,7 +306,7 @@ export default function UserList({ userRole }: UserListProps) {
                       <TableHead className="whitespace-nowrap">Département</TableHead>
                       <TableHead className="whitespace-nowrap">Statut</TableHead>
                       <TableHead className="whitespace-nowrap">Dernière activité</TableHead>
-                      {userRole === 'admin' && <TableHead className="text-right whitespace-nowrap sticky right-0 bg-muted/50">Actions</TableHead>}
+                      {userRole === 'admin' && <TableHead className="text-right whitespace-nowrap sticky right-0 z-10 bg-muted shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.25)]">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -315,7 +315,7 @@ export default function UserList({ userRole }: UserListProps) {
                         <TableRow 
                           key={user.id} 
                           className={cn(
-                            "hover:bg-primary/5 transition-all duration-200 border-b border-border/50 hover:shadow-sm",
+                            "group hover:bg-primary/5 transition-all duration-200 border-b border-border/50 hover:shadow-sm",
                             selectedIds.includes(user.id) && "bg-primary/5"
                           )}
                         >
@@ -358,7 +358,7 @@ export default function UserList({ userRole }: UserListProps) {
                             {user.lastActive ? new Date(user.lastActive).toLocaleDateString('fr-FR') : 'Jamais'}
                           </TableCell>
                           {userRole === 'admin' && (
-                            <TableCell className="text-right">
+                            <TableCell className="text-right sticky right-0 z-10 bg-card group-hover:bg-muted transition-colors shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.25)]">
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon">
@@ -405,7 +405,7 @@ export default function UserList({ userRole }: UserListProps) {
               </div>
 
               {/* Pagination UI */}
-              <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-t mt-4 rounded-xl border">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-4 bg-muted/20 mt-4 rounded-xl border">
                 <div className="text-sm text-muted-foreground">
                   Affichage de <span className="font-medium">{filteredUsers.length}</span> sur <span className="font-medium">{paginationInfo.total}</span> utilisateurs
                 </div>

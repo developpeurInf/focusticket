@@ -126,17 +126,22 @@ const SettingsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
       <Sidebar userRole={userRole} />
       
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header userRole={userRole} onSwitchRole={setUserRole} />
         
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
-          <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Paramètres</h1>
+            <p className="text-muted-foreground">Configurez la plateforme, les notifications et la sécurité.</p>
+          </div>
+
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex items-center gap-6 shadow-sm">
-                <div className="flex items-center gap-3 border-r pr-6">
+              <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 flex flex-wrap items-center gap-4 sm:gap-6 shadow-sm">
+                <div className="flex items-center gap-3 sm:border-r sm:pr-6">
                   <Calendar className="h-5 w-5 text-primary" />
                   <div className="flex flex-col">
                     <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest">Date système</span>
@@ -154,13 +159,13 @@ const SettingsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <Button onClick={saveAllSettings} className="gap-2">
+            <Button onClick={saveAllSettings} className="gap-2 self-start sm:self-auto">
               <Save className="h-4 w-4" /> Sauvegarder tout
             </Button>
           </div>
 
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 mb-8">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 lg:grid-cols-4 mb-6">
               <TabsTrigger value="general" className="gap-2">
                 <Globe className="h-4 w-4" /> Général
               </TabsTrigger>

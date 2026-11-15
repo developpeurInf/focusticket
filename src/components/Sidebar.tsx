@@ -16,9 +16,14 @@ import {
   Shield,
   Laptop,
   BookOpen,
-  Archive
+  Archive,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  X
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { TOGGLE_MOBILE_SIDEBAR_EVENT } from "@/lib/sidebarEvents";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import CreateTicketForm from "@/components/CreateTicketForm";
 import { 
@@ -37,7 +42,17 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ userRole }: SidebarProps) {
-  const [expanded, setExpanded] = useState(true);
+  // L'état replié/déplié est mémorisé pour ne pas se réinitialiser à chaque changement de page
+  const [desktopExpanded, setDesktopExpandedState] = useState<boolean>(() => {
+    try { return localStorage.getItem("sidebar-expanded") !== "false"; } catch { return true; }
+  });
+  const setDesktopExpanded = (value: boolean) => {
+    setDesktopExpandedState(value);
+    try { localStorage.setItem("sidebar-expanded", String(value)); } catch { /* stockage indisponible */ }
+  };
+  const [mobileOpen, setMobileOpen] = useState(false);
+  // Sur mobile, le menu s'ouvre en tiroir et affiche toujours les libellés
+  const expanded = mobileOpen || desktopExpanded;
   const [ticketsExpanded, setTicketsExpanded] = useState(true);
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -51,31 +66,79 @@ export default function Sidebar({ userRole }: SidebarProps) {
 
   const [open, setOpen] = useState(false);
 
+  // Ouverture du tiroir depuis le bouton menu de l'en-tête (mobile)
+  useEffect(() => {
+    const toggle = () => setMobileOpen(o => !o);
+    window.addEventListener(TOGGLE_MOBILE_SIDEBAR_EVENT, toggle);
+    return () => window.removeEventListener(TOGGLE_MOBILE_SIDEBAR_EVENT, toggle);
+  }, []);
+
+  // Fermer le tiroir à chaque changement de page
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname, location.search]);
+
+  // Fermer le tiroir avec la touche Échap
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setMobileOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [mobileOpen]);
+
   const openCount = mockTickets.filter(t => t.status === 'open').length;
   const resolvedCount = mockTickets.filter(t => (t.status === 'resolved' || t.status === 'closed')).length;
 
   return (
-    <div 
+    <>
+    {/* Voile sombre derrière le tiroir (mobile) */}
+    <div
       className={cn(
-        "h-screen border-r flex flex-col bg-background transition-all duration-300",
-        expanded ? "w-64" : "w-16"
+        "fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 md:hidden",
+        mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
+      )}
+      onClick={() => setMobileOpen(false)}
+      aria-hidden="true"
+    />
+    <aside
+      className={cn(
+        "flex h-[100dvh] shrink-0 flex-col border-r bg-background transition-all duration-300",
+        // Mobile : tiroir fixe qui glisse depuis la gauche
+        "fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] shadow-xl",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        // Bureau : colonne fixe, repliable
+        "md:static md:z-auto md:max-w-none md:translate-x-0 md:shadow-none",
+        desktopExpanded ? "md:w-64" : "md:w-16"
       )}
     >
-      <div className="p-4 flex justify-between items-center h-20">
+      <div className={cn("flex h-16 shrink-0 items-center justify-between gap-2 border-b px-4 md:h-20", !expanded && "px-2")}>
         {expanded && (
-          <img src="/logo.png" alt="FNC Logo" className="h-12 w-auto rounded object-contain" />
+          <img src="/logo.png" alt="FOCUS NEXT COMPUTING" className="h-10 w-auto min-w-0 rounded object-contain dark:bg-white dark:px-1.5 dark:py-0.5 md:h-12" />
         )}
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className={cn(!expanded && "mx-auto")}
-          onClick={() => setExpanded(!expanded)}
+        {/* Replier / déplier (bureau) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn("hidden h-8 w-8 shrink-0 text-muted-foreground md:inline-flex", !expanded && "mx-auto")}
+          onClick={() => setDesktopExpanded(!desktopExpanded)}
+          title={desktopExpanded ? "Réduire le menu" : "Agrandir le menu"}
+          aria-label={desktopExpanded ? "Réduire le menu" : "Agrandir le menu"}
         >
-          {expanded ? "←" : "→"}
+          {desktopExpanded ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+        </Button>
+        {/* Fermer (mobile) */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-label="Fermer le menu"
+        >
+          <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 py-4">
+      <ScrollArea className="min-h-0 flex-1 py-4">
         <nav className="space-y-6 px-2">
           {/* Section Tableau de bord */}
           <div>
@@ -109,7 +172,7 @@ export default function Sidebar({ userRole }: SidebarProps) {
               onOpenChange={expanded ? setTicketsExpanded : undefined}
               disabled={!expanded}
             >
-              <div className="flex items-center">
+              <div className="flex items-center gap-1">
                 <SidebarItem 
                   icon={<TicketCheck />} 
                   label="Tickets" 
@@ -119,8 +182,13 @@ export default function Sidebar({ userRole }: SidebarProps) {
                 />
                 {expanded && (
                   <CollapsibleTrigger asChild>
-                    <Button variant="ghost" size="sm" className="p-0 h-auto w-7">
-                      {ticketsExpanded ? "−" : "+"}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0 text-muted-foreground"
+                      aria-label={ticketsExpanded ? "Masquer les filtres de tickets" : "Afficher les filtres de tickets"}
+                    >
+                      <ChevronDown className={cn("h-4 w-4 transition-transform", !ticketsExpanded && "-rotate-90")} />
                     </Button>
                   </CollapsibleTrigger>
                 )}
@@ -193,15 +261,15 @@ export default function Sidebar({ userRole }: SidebarProps) {
         </nav>
       </ScrollArea>
 
-      <div className="p-4">
+      <div className={cn("shrink-0 border-t p-4", !expanded && "px-2")}>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button className={cn("w-full justify-start gap-2 bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-gray-200", !expanded && "justify-center")}>
-              <PlusCircle className="h-5 w-5" />
+              <PlusCircle className="h-5 w-5 shrink-0" />
               {expanded && "Créer un ticket"}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Créer un nouveau ticket</DialogTitle>
               <DialogDescription>
@@ -220,11 +288,12 @@ export default function Sidebar({ userRole }: SidebarProps) {
             !expanded && "justify-center"
           )}
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 shrink-0" />
           {expanded && "Déconnexion"}
         </Button>
       </div>
-    </div>
+    </aside>
+    </>
   );
 }
 
@@ -241,14 +310,16 @@ function SidebarItem({ icon, label, expanded, active, onClick }: SidebarItemProp
     <Button
       variant={active ? "secondary" : "ghost"}
       className={cn(
-        "w-full justify-start",
+        "w-full min-w-0 flex-1 justify-start",
         !expanded && "justify-center px-0",
-        active && "bg-primary/10 hover:bg-primary/20"
+        active && "bg-primary/10 text-primary hover:bg-primary/15"
       )}
       onClick={onClick}
+      title={!expanded ? label : undefined}
+      aria-label={!expanded ? label : undefined}
     >
       {icon}
-      {expanded && <span className="ml-2">{label}</span>}
+      {expanded && <span className="ml-2 truncate">{label}</span>}
     </Button>
   );
 }
@@ -268,12 +339,12 @@ function SidebarSubItem({ icon, label, badge, active, onClick }: SidebarSubItemP
       size="sm"
       className={cn(
         "w-full justify-start h-8 px-2 text-sm font-normal",
-        active && "bg-primary/10 hover:bg-primary/20"
+        active && "bg-primary/10 text-primary hover:bg-primary/15"
       )}
       onClick={onClick}
     >
       {icon}
-      <span className="ml-2">{label}</span>
+      <span className="ml-2 truncate">{label}</span>
       {badge && (
         <span className="ml-auto bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-xs">
           {badge}

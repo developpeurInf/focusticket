@@ -17,7 +17,7 @@ import {
   Legend,
   Cell
 } from "recharts";
-import { RefreshCw, TrendingUp, AlertCircle, CheckCircle2, Monitor } from "lucide-react";
+import { RefreshCw, TrendingUp, AlertCircle, CheckCircle2, Monitor, Archive } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getTickets } from "@/data/ticketService";
 import { getAssets } from "@/data/assetService";
@@ -25,6 +25,13 @@ import { getUsers } from "@/data/userService";
 import { useToast } from "@/components/ui/use-toast";
 import { downloadCSV, ticketsToCSV } from "@/utils/exportUtils";
 import { useMemo } from "react";
+
+// Libellés français des statuts et priorités pour les graphiques
+const STATUS_LABELS: Record<string, string> = { open: 'Ouvert', 'in-progress': 'En cours', closed: 'Clôturé', resolved: 'Clôturé', archived: 'Archivé' };
+const STATUS_COLORS: Record<string, string> = { Ouvert: '#3b82f6', 'En cours': '#f59e0b', 'Clôturé': '#10b981', 'Archivé': '#64748b' };
+const PRIORITY_LABELS: Record<string, string> = { low: 'Basse', medium: 'Moyenne', high: 'Haute', critical: 'Critique' };
+const isClosedStatus = (s: string) => ['resolved', 'résolu', 'resolu', 'closed', 'clos', 'clôturé', 'cloturé'].includes(String(s).toLowerCase());
+const isArchivedStatus = (s: string) => ['archived', 'archivé', 'archive'].includes(String(s).toLowerCase());
 
 
 
@@ -37,8 +44,9 @@ export default function ReportDashboard() {
   
   // Data fetching
   const { data: ticketsData, isLoading: loadingTickets } = useQuery({ 
-    queryKey: ['tickets'], 
-    queryFn: () => getTickets({ limit: 5000 }) // Load extensive data for reports
+    queryKey: ['tickets', 'reports-with-archived'],
+    // Les statistiques portent sur tout l'historique : on inclut les tickets archivés (exclus par défaut par l'API)
+    queryFn: () => getTickets({ limit: 5000, includeArchived: 'true' })
   });
   const tickets = ticketsData?.tickets || [];
   const { data: assetsData, isLoading: loadingAssets } = useQuery({ queryKey: ['assets'], queryFn: () => getAssets({ limit: 5000 }) });
@@ -51,14 +59,16 @@ export default function ReportDashboard() {
     // 1. Tickets by Priority
     const priorityMap: Record<string, number> = {};
     tickets.forEach(t => {
-      priorityMap[t.priority] = (priorityMap[t.priority] || 0) + 1;
+      const label = PRIORITY_LABELS[String(t.priority).toLowerCase()] || t.priority;
+      priorityMap[label] = (priorityMap[label] || 0) + 1;
     });
     const byPriority = Object.entries(priorityMap).map(([name, value]) => ({ name, value }));
 
     // 2. Tickets by Status
     const statusMap: Record<string, number> = {};
     tickets.forEach(t => {
-      statusMap[t.status] = (statusMap[t.status] || 0) + 1;
+      const label = STATUS_LABELS[String(t.status).toLowerCase()] || t.status;
+      statusMap[label] = (statusMap[label] || 0) + 1;
     });
     const byStatus = Object.entries(statusMap).map(([name, value]) => ({ name, value }));
 
@@ -81,14 +91,14 @@ export default function ReportDashboard() {
     }));
 
     // 5. Monthly Trend
-    const trendMap: Record<string, { month: string; opened: number; resolved: number }> = {};
+    const trendMap: Record<string, { month: string; opened: number; resolved: number; archived: number }> = {};
     const last6Months = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date();
       d.setMonth(d.getMonth() - i);
       const monthYear = d.toLocaleString('fr-FR', { month: 'short', year: 'numeric' });
       const key = `${d.getFullYear()}-${d.getMonth()}`;
-      trendMap[key] = { month: monthYear, opened: 0, resolved: 0 };
+      trendMap[key] = { month: monthYear, opened: 0, resolved: 0, archived: 0 };
       last6Months.push(key);
     }
 
@@ -97,8 +107,10 @@ export default function ReportDashboard() {
       const key = `${d.getFullYear()}-${d.getMonth()}`;
       if (trendMap[key]) {
         trendMap[key].opened++;
-        if (t.status === 'closed') {
+        if (isClosedStatus(t.status)) {
           trendMap[key].resolved++;
+        } else if (isArchivedStatus(t.status)) {
+          trendMap[key].archived++;
         }
       }
     });
@@ -110,7 +122,8 @@ export default function ReportDashboard() {
       .map(u => {
         const resolvedCount = tickets.filter(t => {
           const isAssigned = t.assignedTo === u.name;
-          const isResolved = ['resolved', 'Résolu', 'resolu', 'closed', 'Clos', 'clos'].includes(t.status as string);
+          // Un ticket archivé a été traité : il compte comme résolu
+          const isResolved = isClosedStatus(t.status) || isArchivedStatus(t.status);
           return isAssigned && isResolved;
         }).length;
         
@@ -131,7 +144,10 @@ export default function ReportDashboard() {
 
     // 7. General KPI
     const totalTickets = tickets.length;
-    const resolvedTickets = tickets.filter(t => t.status === 'closed').length;
+    const closedTickets = tickets.filter(t => isClosedStatus(t.status)).length;
+    const archivedTickets = tickets.filter(t => isArchivedStatus(t.status)).length;
+    // Taux de résolution : tickets clôturés + archivés (un ticket archivé est un ticket traité)
+    const resolvedTickets = closedTickets + archivedTickets;
     const slaRate = totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0;
     const activeAssets = assets.filter(a => a.status === 'in-use' || a.status === 'active').length;
 
@@ -142,7 +158,7 @@ export default function ReportDashboard() {
       byAssetStatus, 
       monthlyTrends, 
       techPerformance,
-      kpi: { totalTickets, resolvedTickets, slaRate, totalAssets: assets.length, activeAssets }
+      kpi: { totalTickets, resolvedTickets, closedTickets, archivedTickets, slaRate, totalAssets: assets.length, activeAssets }
     };
   }, [tickets, assets, users]);
 
@@ -165,9 +181,9 @@ export default function ReportDashboard() {
 
   return (
     <div className="space-y-6 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Analyse Stratégique</h2>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight">Analyse Stratégique</h2>
           <p className="text-muted-foreground">Données consolidées du parc informatique et de la maintenance.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -182,7 +198,7 @@ export default function ReportDashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 sm:[&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1">
         <Card className="bg-primary/5 border-primary/20">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between space-y-0 pb-2">
@@ -190,45 +206,57 @@ export default function ReportDashboard() {
               <TrendingUp className="h-4 w-4 text-primary" />
             </div>
             <div className="text-2xl font-bold">{stats.kpi.totalTickets}</div>
-            <p className="text-xs text-muted-foreground mt-1">Volume total enregistré</p>
+            <p className="text-xs text-muted-foreground mt-1">Volume total enregistré, archivés compris</p>
           </CardContent>
         </Card>
-        <Card className="bg-emerald-50 border-emerald-200">
+        <Card className="bg-emerald-50 border-emerald-200 dark:bg-emerald-950/30 dark:border-emerald-900">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between space-y-0 pb-2">
               <p className="text-sm font-medium">Taux de Résolution</p>
               <CheckCircle2 className="h-4 w-4 text-emerald-600" />
             </div>
-            <div className="text-2xl font-bold text-emerald-700">{stats.kpi.slaRate}%</div>
-            <p className="text-xs text-emerald-600/80 mt-1">SLA - Performance globale</p>
+            <div className="text-2xl font-bold text-emerald-700 dark:text-emerald-400">{stats.kpi.slaRate}%</div>
+            <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">Clôturés + archivés sur le total</p>
           </CardContent>
         </Card>
-        <Card className="bg-indigo-50 border-indigo-200">
+        <Card className="bg-slate-100 border-slate-200 dark:bg-slate-800/40 dark:border-slate-700">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between space-y-0 pb-2">
+              <p className="text-sm font-medium">Tickets Archivés</p>
+              <Archive className="h-4 w-4 text-slate-600 dark:text-slate-300" />
+            </div>
+            <div className="text-2xl font-bold text-slate-700 dark:text-slate-200">{stats.kpi.archivedTickets}</div>
+            <p className="text-xs text-slate-600/80 dark:text-slate-400 mt-1">
+              {stats.kpi.totalTickets > 0 ? Math.round((stats.kpi.archivedTickets / stats.kpi.totalTickets) * 100) : 0}% du volume total
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-indigo-50 border-indigo-200 dark:bg-indigo-950/30 dark:border-indigo-900">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between space-y-0 pb-2">
               <p className="text-sm font-medium">Inventaire Actif</p>
               <Monitor className="h-4 w-4 text-indigo-600" />
             </div>
-            <div className="text-2xl font-bold text-indigo-700">{stats.kpi.activeAssets}</div>
-            <p className="text-xs text-indigo-600/80 mt-1">Sur {stats.kpi.totalAssets} équipements</p>
+            <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-400">{stats.kpi.activeAssets}</div>
+            <p className="text-xs text-indigo-600/80 dark:text-indigo-400/80 mt-1">Sur {stats.kpi.totalAssets} équipements</p>
           </CardContent>
         </Card>
-        <Card className="bg-amber-50 border-amber-200">
+        <Card className="bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-900">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between space-y-0 pb-2">
               <p className="text-sm font-medium">Alertes Critiques</p>
               <AlertCircle className="h-4 w-4 text-amber-600" />
             </div>
-            <div className="text-2xl font-bold text-amber-700">
-              {stats.byPriority.find(p => p.name === 'critical' || p.name === 'Critique')?.value || 0}
+            <div className="text-2xl font-bold text-amber-700 dark:text-amber-400">
+              {stats.byPriority.filter(p => p.name === 'Critique' || p.name === 'Haute').reduce((sum, p) => sum + p.value, 0)}
             </div>
-            <p className="text-xs text-amber-600/80 mt-1">Tickets haute priorité</p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">Tickets haute priorité</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="tickets" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid h-auto w-full grid-cols-3 sm:max-w-md">
           <TabsTrigger value="tickets">Maintenance</TabsTrigger>
           <TabsTrigger value="assets">Parc Informatique</TabsTrigger>
           <TabsTrigger value="performance">Équipe</TabsTrigger>
@@ -260,7 +288,8 @@ export default function ReportDashboard() {
                     <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Area type="monotone" dataKey="opened" stroke="#6366f1" fillOpacity={1} fill="url(#colorOpened)" name="Ouverts" />
-                    <Area type="monotone" dataKey="resolved" stroke="#10b981" fillOpacity={1} fill="url(#colorResolved)" name="Résolus" />
+                    <Area type="monotone" dataKey="resolved" stroke="#10b981" fillOpacity={1} fill="url(#colorResolved)" name="Clôturés" />
+                    <Area type="monotone" dataKey="archived" stroke="#64748b" fillOpacity={0} name="Archivés" />
                     <Legend />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -291,6 +320,28 @@ export default function ReportDashboard() {
                     <Tooltip />
                     <Legend />
                   </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Répartition par Statut</CardTitle>
+                <CardDescription>Tickets ouverts, clôturés et archivés sur l'ensemble de l'historique.</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.byStatus} layout="vertical" margin={{ left: 20, right: 30 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                    <XAxis type="number" allowDecimals={false} />
+                    <YAxis type="category" dataKey="name" width={80} />
+                    <Tooltip />
+                    <Bar dataKey="value" name="Tickets" radius={[0, 4, 4, 0]} barSize={28}>
+                      {stats.byStatus.map((entry, index) => (
+                        <Cell key={`status-${index}`} fill={STATUS_COLORS[entry.name] || COLORS[index % COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>

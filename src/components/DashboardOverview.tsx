@@ -26,7 +26,8 @@ import {
   Server,
   Zap,
   TrendingUp,
-  Info
+  Info,
+  Archive
 } from "lucide-react";
 import { getTickets } from "@/data/ticketService";
 import { getAssets } from "@/data/assetService";
@@ -50,7 +51,8 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
   const loadDashboardData = async () => {
     try {
       const [ticketsData, assets, users] = await Promise.all([
-        getTickets({ limit: 1000 }),
+        // Les tickets archivés sont exclus par défaut par l'API : on les inclut pour les statistiques
+        getTickets({ limit: 1000, includeArchived: 'true' }),
         getAssets({ limit: 1000 }),
         getUsers({ limit: 1000 })
       ]);
@@ -78,6 +80,7 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
 
     const open = mockTickets.filter(t => ['open', 'Ouvert', 'ouvert', 'in-progress', 'En cours', 'en-cours'].includes(t.status as string)).length;
     const resolved = mockTickets.filter(t => ['resolved', 'Résolu', 'resolu', 'closed', 'Clos', 'clôturé', 'cloturé'].includes(t.status as string)).length;
+    const archived = mockTickets.filter(t => ['archived', 'archivé', 'Archivé', 'archive'].includes(t.status as string)).length;
     
     // Resolved today
     const resolvedToday = mockTickets.filter(t => {
@@ -88,7 +91,7 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
     }).length;
 
     // Monthly Trend
-    const monthly: Record<string, { month: string; opened: number; resolved: number }> = {};
+    const monthly: Record<string, { month: string; opened: number; resolved: number; archived: number }> = {};
     mockTickets.forEach(t => {
       if (!t.createdAt) return;
       const d = new Date(t.createdAt);
@@ -97,12 +100,14 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
       const sortKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const monthYear = d.toLocaleString('fr-FR', { month: 'short', year: 'numeric' });
       
-      if (!monthly[sortKey]) monthly[sortKey] = { month: monthYear, opened: 0, resolved: 0 };
+      if (!monthly[sortKey]) monthly[sortKey] = { month: monthYear, opened: 0, resolved: 0, archived: 0 };
       monthly[sortKey].opened++;
       
       const status = String(t.status || '').toLowerCase();
       if (['resolved', 'résolu', 'resolu', 'closed', 'clos', 'clôturé'].includes(status)) {
         monthly[sortKey].resolved++;
+      } else if (['archived', 'archivé', 'archive'].includes(status)) {
+        monthly[sortKey].archived++;
       }
     });
 
@@ -145,8 +150,9 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
     }).length;
 
     return { 
-      open, 
-      resolved, 
+      open,
+      resolved,
+      archived,
       resolvedToday, 
       createdToday,
       monthlyTrend, 
@@ -162,20 +168,21 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
   return (
     <div className="space-y-8 pb-10 animate-in fade-in duration-500">
       {/* KPI Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 md:gap-6 sm:[&>*:last-child]:col-span-2 xl:[&>*:last-child]:col-span-1">
         <KPIBox title="Tickets Ouverts" value={stats.open} detail="En attente de résolution" bg="bg-blue-50 dark:bg-blue-950/30" shadow="shadow-blue-500/5" iconBg="bg-blue-100 dark:bg-blue-900/40" textColor="text-blue-700 dark:text-blue-300" icon={<AlertCircle className="text-blue-600 dark:text-blue-400" />} />
         <KPIBox title="Demandes Clôturées" value={stats.resolved} detail={`+${stats.resolvedToday} aujourd'hui`} bg="bg-emerald-50 dark:bg-emerald-950/30" shadow="shadow-emerald-500/5" iconBg="bg-emerald-100 dark:bg-emerald-900/40" textColor="text-emerald-700 dark:text-emerald-300" icon={<CheckCircle2 className="text-emerald-600 dark:text-emerald-400" />} />
-        <KPIBox title="Équipements Parc" value={mockAssets.length} detail="Actifs inventoriés" bg="bg-purple-50 dark:bg-purple-950/30" shadow="shadow-purple-500/5" iconBg="bg-purple-100 dark:bg-purple-900/40" textColor="text-purple-700 dark:text-purple-300" icon={<Laptop className="text-purple-600 dark:text-purple-400" />} />
+        <KPIBox title="Tickets Archivés" value={stats.archived} detail="Retirés de la liste active" bg="bg-slate-100 dark:bg-slate-800/40" shadow="shadow-slate-500/5" iconBg="bg-slate-200 dark:bg-slate-700/50" textColor="text-slate-700 dark:text-slate-300" icon={<Archive className="text-slate-600 dark:text-slate-300" />} />
+        <KPIBox title="Équipements Parc"value={mockAssets.length} detail="Actifs inventoriés" bg="bg-purple-50 dark:bg-purple-950/30" shadow="shadow-purple-500/5" iconBg="bg-purple-100 dark:bg-purple-900/40" textColor="text-purple-700 dark:text-purple-300" icon={<Laptop className="text-purple-600 dark:text-purple-400" />} />
         <KPIBox title="Total Utilisateurs" value={realUsers.length} detail="Membres actifs" bg="bg-orange-50 dark:bg-orange-950/30" shadow="shadow-orange-500/5" iconBg="bg-orange-100 dark:bg-orange-900/40" textColor="text-orange-700 dark:text-orange-300" icon={<Users className="text-orange-600 dark:text-orange-400" />} />
       </div>
 
       {/* Main Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
         
         {/* Chart 1: Evolution */}
         <DashboardCard 
-          title="Nouveaux Tickets vs Résolus" 
-          description="Suivi du volume de travail : tickets reçus par mois par rapport à ceux qui ont été terminés."
+          title="Nouveaux Tickets vs Résolus"
+          description="Suivi du volume de travail : tickets reçus par mois par rapport à ceux qui ont été clôturés ou archivés."
           icon={<TrendingUp className="text-blue-500" />}
         >
           <div className="h-[320px] w-full pt-4">
@@ -190,6 +197,7 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
                 <Legend verticalAlign="top" align="right" height={36}/>
                 <Area type="monotone" dataKey="opened" stroke="#3b82f6" strokeWidth={3} fillOpacity={0.2} fill="#3b82f6" name="Nouveaux Tickets" />
                 <Area type="monotone" dataKey="resolved" stroke="#10b981" strokeWidth={3} fillOpacity={0.05} fill="#10b981" name="Tickets Clôturés" />
+                <Area type="monotone" dataKey="archived" stroke="#64748b" strokeWidth={3} fillOpacity={0.05} fill="#64748b" name="Tickets Archivés" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -272,15 +280,15 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-              <span className="text-2xl font-bold text-slate-800">{mockAssets.length}</span>
-              <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Actifs</p>
+              <span className="text-2xl font-bold text-foreground">{mockAssets.length}</span>
+              <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Actifs</p>
             </div>
           </div>
         </DashboardCard>
       </div>
 
       {/* System Info Bar */}
-      <div className="bg-slate-900 rounded-3xl p-6 text-white flex flex-col md:flex-row justify-between items-center gap-6 shadow-xl border border-slate-700">
+      <div className="bg-slate-900 rounded-3xl p-5 md:p-6 text-white flex flex-col lg:flex-row justify-between items-center gap-6 shadow-xl border border-slate-700">
          <div className="flex items-center gap-4">
             <div className="h-12 w-12 rounded-2xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
                <Activity className="h-6 w-6 text-blue-400" />
@@ -290,23 +298,23 @@ export default function DashboardOverview({}: DashboardOverviewProps) {
                <p className="text-xs text-slate-400">Statut: <span className="text-emerald-400 font-bold">Opérationnel</span></p>
             </div>
          </div>
-         <div className="flex gap-8 items-center">
+         <div className="flex flex-wrap justify-center gap-4 sm:gap-8 items-center">
             <div className="text-center">
-               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Latence API</p>
+               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Latence API</p>
                <span className="text-sm font-mono text-blue-400">24ms</span>
             </div>
-            <div className="h-8 w-px bg-slate-800" />
+            <div className="hidden sm:block h-8 w-px bg-slate-700" />
             <div className="text-center">
-               <p className="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Uptime</p>
+               <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Uptime</p>
                <span className="text-sm font-mono text-emerald-400">99.99%</span>
             </div>
-            <div className="h-8 w-px bg-slate-800" />
+            <div className="hidden sm:block h-8 w-px bg-slate-700" />
             <div className="flex flex-col items-end">
                <div className="flex items-center gap-2">
                   <span className="text-xs">Database Sync</span>
                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                </div>
-               <p className="text-[10px] text-slate-500">Mise à jour: Il y a 1m</p>
+               <p className="text-[10px] text-slate-400">Mise à jour : il y a 1 min</p>
             </div>
          </div>
       </div>
@@ -318,7 +326,7 @@ function KPIBox({ title, value, detail, bg, shadow, icon, iconBg, textColor }: a
   return (
     <Card className={`border-none ${shadow} ${bg} hover:shadow-md transition-all duration-300 hover:-translate-y-1 overflow-hidden relative group`}>
       {/* Decorative background element */}
-      <div className={`absolute right-[-10%] top-[-10%] opacity-[0.05] dark:opacity-10 transform scale-[2.5] group-hover:scale-[2.8] transition-transform duration-700 pointer-events-none ${textColor}`}>
+      <div className={`absolute -right-5 -bottom-5 opacity-[0.07] dark:opacity-10 [&_svg]:h-28 [&_svg]:w-28 transition-transform duration-700 group-hover:scale-110 pointer-events-none ${textColor}`}>
         {icon}
       </div>
       
@@ -343,13 +351,13 @@ function KPIBox({ title, value, detail, bg, shadow, icon, iconBg, textColor }: a
 
 function DashboardCard({ title, description, icon, children }: any) {
   return (
-    <Card className="border-slate-200 shadow-lg overflow-hidden">
-      <CardHeader className="bg-slate-50/50 border-b border-slate-100 flex flex-row items-center gap-4">
-        <div className="p-2.5 bg-white rounded-xl shadow-sm border border-slate-100">
+    <Card className="shadow-lg overflow-hidden">
+      <CardHeader className="bg-muted/30 border-b flex flex-row items-center gap-3 sm:gap-4 space-y-0 p-4 sm:p-6">
+        <div className="shrink-0 p-2.5 bg-background rounded-xl shadow-sm border">
            {icon}
         </div>
         <div>
-          <CardTitle className="text-base font-bold text-slate-800">{title}</CardTitle>
+          <CardTitle className="text-base font-bold text-foreground">{title}</CardTitle>
           <CardDescription className="text-xs">{description}</CardDescription>
         </div>
       </CardHeader>
@@ -363,10 +371,10 @@ function DashboardCard({ title, description, icon, children }: any) {
 function DashboardSkeleton() {
   return (
     <div className="space-y-8 animate-pulse">
-      <div className="grid grid-cols-4 gap-6">
-        {[1,2,3,4].map(i => <Skeleton key={i} className="h-32 rounded-3xl" />)}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-6">
+        {[1,2,3,4,5].map(i =><Skeleton key={i} className="h-32 rounded-3xl" />)}
       </div>
-      <div className="grid grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
         <Skeleton className="h-[400px] rounded-3xl" />
         <Skeleton className="h-[400px] rounded-3xl" />
         <Skeleton className="h-[400px] rounded-3xl" />

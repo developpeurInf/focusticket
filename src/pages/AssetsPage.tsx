@@ -243,15 +243,15 @@ export default function AssetsPage() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
       <Sidebar userRole={userRole} />
 
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header userRole={userRole} onSwitchRole={() => { }} />
 
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-3xl font-bold">Inventaire (Parc Informatique)</h1>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Inventaire (Parc Informatique)</h1>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
@@ -259,7 +259,7 @@ export default function AssetsPage() {
                   Ajouter un Actif
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-lg">
+              <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Ajouter un nouvel équipement</DialogTitle>
                   <DialogDescription>Remplissez les détails de l'équipement.</DialogDescription>
@@ -323,11 +323,11 @@ export default function AssetsPage() {
           </div>
 
           <Card>
-            <CardHeader className="pb-3 px-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <CardHeader className="pb-3 px-4 sm:px-6">
+              <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                 <CardTitle className="text-xl font-semibold">Tous les Actifs</CardTitle>
-                <div className="flex items-center gap-2 w-full md:w-auto">
-                  <div className="relative flex-grow md:flex-grow-0 md:w-64">
+                <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:justify-end">
+                  <div className="relative w-full sm:w-64 sm:flex-none">
                     <SearchIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder="Chercher un équipement, S/N..."
@@ -404,10 +404,10 @@ export default function AssetsPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-0">
-              <div className="rounded-xl border shadow-sm overflow-hidden border">
+            <CardContent className="px-3 pb-0 sm:px-6">
+              <div className="rounded-xl border shadow-sm overflow-hidden">
                 <Table>
-                  <TableHeader className="bg-muted/50">
+                  <TableHeader className="bg-muted">
                     <TableRow className="hover:bg-transparent text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                       <TableHead className="w-[50px]">
                         <Checkbox 
@@ -428,7 +428,7 @@ export default function AssetsPage() {
                       <TableHead className="whitespace-nowrap">Type</TableHead>
                       <TableHead className="whitespace-nowrap">Modèle</TableHead>
                       <TableHead className="whitespace-nowrap">Site</TableHead>
-                      <TableHead className="text-right whitespace-nowrap sticky right-0 bg-muted/50">Actions</TableHead>
+                      <TableHead className="text-right whitespace-nowrap sticky right-0 z-10 bg-muted shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.25)]">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -474,7 +474,7 @@ export default function AssetsPage() {
                           </TableCell>
                           <TableCell>{asset.modele || "-"}</TableCell>
                           <TableCell className="text-sm">{asset.site || "-"}</TableCell>
-                          <TableCell className="text-right whitespace-nowrap">
+                          <TableCell className="text-right whitespace-nowrap sticky right-0 z-10 bg-card group-hover:bg-muted transition-colors shadow-[-6px_0_6px_-6px_rgba(0,0,0,0.25)]">
                             <div className="flex justify-end gap-1">
                               <Button
                                 variant="ghost"
@@ -520,7 +520,7 @@ export default function AssetsPage() {
               </div>
 
               {/* Pagination UI */}
-              <div className="flex items-center justify-between px-6 py-4 bg-muted/20 border-t">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-4 mt-4 bg-muted/20 border-t">
                 <div className="text-sm text-muted-foreground">
                   Affichage de <span className="font-medium">{filteredAssets.length}</span> sur <span className="font-medium">{paginationInfo.total}</span> actifs
                 </div>

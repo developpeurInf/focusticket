@@ -198,16 +198,16 @@ export default function KnowledgeBasePage() {
 
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-[100dvh] w-full overflow-hidden bg-background">
       <Sidebar userRole={userRole} />
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex min-w-0 flex-1 flex-col overflow-hidden">
         <Header userRole={userRole} onSwitchRole={() => { }} />
         <div className="flex-1 overflow-auto p-4 md:p-6 space-y-6">
 
           {/* Header */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Base de connaissances (FAQ)</h1>
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Base de connaissances (FAQ)</h1>
               <p className="text-muted-foreground">Trouvez des solutions rapides à vos problèmes techniques.</p>
             </div>
             {userRole !== 'customer' && (
@@ -223,7 +223,7 @@ export default function KnowledgeBasePage() {
             <SearchIcon className="absolute left-3 top-3 h-5 w-5 text-muted-foreground" />
             <Input
               placeholder="Chercher une solution (ex: VPN, imprimante, Outlook...)"
-              className="pl-10 h-12 text-lg shadow-sm"
+              className="pl-10 h-12 text-base shadow-sm"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
             />
