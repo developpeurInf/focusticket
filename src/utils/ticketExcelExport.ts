@@ -426,7 +426,11 @@ function buildInterventionsSheet(wb: Workbook, tickets: Ticket[], rowOfTicket: M
     for (let row = firstRow; row <= lastRow; row++) {
       const numberCell = ws.getCell(row, 1);
       const target = rowOfTicket.get(t.id);
-      if (target) numberCell.value = { text: clean(t.ticketNumber), hyperlink: `#'Tickets'!A${target}` } as any;
+      // Lien interne via la formule LIEN_HYPERTEXTE (les liens internes natifs d'ExcelJS rendent le fichier invalide pour Excel)
+      if (target) {
+        const label = clean(t.ticketNumber).replace(/"/g, '""');
+        numberCell.value = { formula: `HYPERLINK("#'Tickets'!A${target}","${label}")`, result: clean(t.ticketNumber) } as any;
+      }
       numberCell.font = { size: 10, bold: true, underline: true, color: { argb: "FF" + COLORS.brand } };
       paintBadge(ws.getCell(row, 3), STATUS_COLORS[status]);
     }
@@ -438,7 +442,6 @@ function buildInterventionsSheet(wb: Workbook, tickets: Ticket[], rowOfTicket: M
     for (let row = firstRow + 1; row <= lastRow; row++) ws.getRow(row).outlineLevel = 1;
   });
 
-  ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
   ws.views = [{ state: "frozen", xSplit: 2, ySplit: headerRow, showGridLines: false }];
   ws.autoFilter = { from: { row: headerRow, column: 1 }, to: { row: Math.max(r - 1, headerRow + 1), column: INTERVENTION_COLUMNS.length } };
   setupPrint(ws, headerRow);
