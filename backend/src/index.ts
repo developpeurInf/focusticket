@@ -31,18 +31,34 @@ const allowedOrigins = [
   'http://127.0.0.1:5174', 
   'http://localhost:3000', 
   'https://focustickets.focus.labs',
-  process.env.FRONTEND_URL
+  // FRONTEND_URL peut contenir plusieurs adresses séparées par des virgules
+  ...String(process.env.FRONTEND_URL || '').split(',').map(u => u.trim().replace(/\/$/, '')),
 ].filter(Boolean);
-app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Non autorisé par la politique CORS (Cross-Origin)'));
-    }
-  },
-  credentials: true
-}));
+
+// Une page servie par le même serveur (même hôte que la requête, via nginx) est toujours autorisée,
+// quelle que soit l'adresse utilisée pour l'ouvrir (IP du LAN, IP ZeroTier, nom DNS...)
+function isSameHost(origin: string, req: any): boolean {
+  try {
+    const originHost = new URL(origin).host;
+    const requestHosts = [req.headers['x-forwarded-host'], req.headers.host]
+      .filter(Boolean)
+      .flatMap((h: string) => String(h).split(',').map(s => s.trim()));
+    return requestHosts.includes(originHost);
+  } catch {
+    return false;
+  }
+}
+
+const isOriginAllowed = (origin: string | undefined, req: any) =>
+  !origin || allowedOrigins.includes(origin) || isSameHost(origin, req);
+
+// Origine inconnue : requête refusée proprement (403) au lieu d'une erreur 500
+app.use((req: any, res: any, next: any) => {
+  if (isOriginAllowed(req.headers.origin, req)) return next();
+  console.warn(`CORS refusé pour l'origine : ${req.headers.origin}`);
+  res.status(403).json({ error: 'Origine non autorisée (CORS).' });
+});
+app.use(cors({ origin: true, credentials: true }));
 
 // 3. Protection anti-DDoS et anti Brute-Force (Rate Limiting)
 const apiLimiter = rateLimit({
