@@ -35,7 +35,7 @@ const formSchema = z.object({
   id: z.string().optional(),
   subject: z.string().min(1, "Le titre est requis."),
   description: z.string().min(1, "La description est requise."),
-  status: z.enum(["open", "in-progress", "resolved", "closed"]),
+  status: z.enum(["open", "in-progress", "resolved", "closed", "archived"]),
   priority: z.enum(["low", "medium", "high", "critical"]),
   createdBy: z.string().optional(),
   assignedTo: z.string().optional().nullable(),
@@ -44,6 +44,7 @@ const formSchema = z.object({
   serialNumber: z.string().optional(),
   site: z.string().optional(),
   actions: z.string().optional(),
+  actionPlan: z.string().optional(),
   resolvedAt: z.string().optional().nullable(),
   comment: z.string().optional(),
   createdAt: z.string().optional(),
@@ -69,7 +70,8 @@ export default function CreateTicketForm({ ticket, onSuccess }: { ticket?: any, 
     'Ouvert': 'open',
     'En cours': 'in-progress',
     'Résolu': 'resolved',
-    'Clos': 'closed'
+    'Clos': 'closed',
+    'Archivé': 'archived'
   };
   
   const priorityMap: Record<string, string> = {
@@ -96,6 +98,7 @@ export default function CreateTicketForm({ ticket, onSuccess }: { ticket?: any, 
       serialNumber: ticket?.serialNumber === 'N/A' ? "" : (ticket?.serialNumber || ""),
       site: (ticket?.site === 'Non défini' ? 'SAPINO' : (ticket?.site || "SAPINO")),
       actions: ticket?.actions || "",
+      actionPlan: ticket?.actionPlan || "",
       resolvedAt: ticket?.resolvedAt || "",
       comment: ticket?.comment || "",
       createdAt: ticket?.createdAt || new Date().toISOString().split('T')[0],
@@ -129,6 +132,7 @@ export default function CreateTicketForm({ ticket, onSuccess }: { ticket?: any, 
         serialNumber: data.serialNumber || "",
         site: data.site || "",
         actions: data.actions || "",
+        actionPlan: data.actionPlan || "",
         comment: data.comment || "",
         resolvedAt: data.resolvedAt || null,
         createdAt: data.createdAt || null,
@@ -346,6 +350,26 @@ export default function CreateTicketForm({ ticket, onSuccess }: { ticket?: any, 
                 </FormItem>
               )}
             />
+            <FormField
+              control={form.control}
+              name="actionPlan"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Plan d'action initial</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      className="min-h-[90px]"
+                      placeholder={"Étapes prévues pour traiter le ticket, par exemple :\n1. Diagnostic sur site\n2. Remplacement de la pièce\n3. Tests et validation"}
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-[11px] text-muted-foreground">
+                    Les interventions réalisées s'ajoutent ensuite étape par étape depuis le détail du ticket.
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
 
           {/* STEP 3: Suivi (Statut & Attribution) */}
@@ -384,6 +408,7 @@ export default function CreateTicketForm({ ticket, onSuccess }: { ticket?: any, 
                     <SelectContent>
                       <SelectItem value="open">Ouvert</SelectItem>
                       <SelectItem value="closed">Clôturé</SelectItem>
+                      <SelectItem value="archived">Archivé</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

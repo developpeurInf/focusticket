@@ -1,4 +1,4 @@
-import { Ticket } from "@/types/ticket";
+import { Ticket, Intervention } from "@/types/ticket";
 import axios from "axios";
 
 const API_URL = `/api`;
@@ -58,7 +58,11 @@ export const getTickets = async (params: {
         site: t.site || "-",
         actions: t.actions || "",
         resolvedAt: t.resolvedAt || null,
+        updatedAt: t.updatedAt,
         comment: t.comment || "",
+        actionPlan: t.actionPlan || "",
+        interventionsCount: t._count?.interventions ?? (t.interventions ? t.interventions.length : 0),
+        interventions: t.interventions || undefined,
         comments: (t.comments || []).map((c: any) => ({
           id: c.id,
           content: c.content,
@@ -74,33 +78,62 @@ export const getTickets = async (params: {
   }
 };
 
-export const exportTickets = async (format: 'pdf' | 'excel', filters?: any): Promise<void> => {
-  if (format === 'excel') {
-    try {
-      const XLSX = await import('xlsx');
-      // On récupère TOUS les tickets pour l'export (on met une limite haute)
-      const res = await getTickets({ ...filters, limit: 10000 });
-      const data = res.tickets.map(t => ({
-        "N° Ticket": t.ticketNumber,
-        "Titre": t.subject,
-        "Statut": t.status,
-        "Priorité": t.priority,
-        "Demandeur": t.createdBy,
-        "Intervenant": t.assignedTo,
-        "Équipement": t.equipment,
-        "S/N": t.serialNumber,
-        "Site": t.site,
-        "Actions": t.actions,
-        "Date Ouverture": new Date(t.createdAt).toLocaleDateString('fr-FR'),
-        "Date Résolution": t.resolvedAt ? new Date(t.resolvedAt).toLocaleDateString('fr-FR') : "-"
-      }));
+// Export Excel des tickets filtrés.
+// "synthese" : une ligne par ticket ; "detaille" : ajoute l'historique de toutes les interventions.
+export const exportTickets = async (
+  kind: 'synthese' | 'detaille',
+  filters?: any,
+  filterLabels: string[] = []
+): Promise<string> => {
+  const { exportTicketsToExcel } = await import('@/utils/ticketExcelExport');
+  // On récupère TOUS les tickets correspondant aux filtres (limite haute), triés par numéro
+  const res = await getTickets({
+    sortBy: 'ticketNumber',
+    sortOrder: 'asc',
+    ...filters,
+    page: 1,
+    limit: 10000,
+    // Les interventions servent aux deux versions (résumé de la dernière étape, temps total)
+    includeInterventions: 'true',
+  });
+  return exportTicketsToExcel(res.tickets, kind, filterLabels);
+};
 
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Tickets");
-      XLSX.writeFile(wb, `export_tickets_${new Date().toISOString().split('T')[0]}.xlsx`);
-    } catch (err) {
-      console.error("Export Excel failed", err);
-    }
-  }
+export interface TicketFilterOptions {
+  statuses: string[];
+  sites: string[];
+  categories: string[];
+  priorities: string[];
+  assignees: { id: string; name: string }[];
+  creators: { id: string; name: string }[];
+}
+
+// Valeurs disponibles pour les filtres de la page Tickets
+export const getTicketFilterOptions = async (): Promise<TicketFilterOptions> => {
+  const response = await axios.get(`${API_URL}/tickets/filter-options`);
+  return response.data;
+};
+
+// ===== Interventions (étapes successives d'un ticket) =====
+
+export type InterventionInput = Partial<Pick<Intervention,
+  'performedAt' | 'technician' | 'actions' | 'result' | 'nextSteps' | 'durationMinutes' | 'statusAfter'>>;
+
+export const getInterventions = async (ticketId: string): Promise<Intervention[]> => {
+  const response = await axios.get(`${API_URL}/tickets/${ticketId}/interventions`);
+  return response.data;
+};
+
+export const addIntervention = async (ticketId: string, data: InterventionInput): Promise<Intervention> => {
+  const response = await axios.post(`${API_URL}/tickets/${ticketId}/interventions`, data);
+  return response.data;
+};
+
+export const updateIntervention = async (ticketId: string, interventionId: string, data: InterventionInput): Promise<Intervention> => {
+  const response = await axios.put(`${API_URL}/tickets/${ticketId}/interventions/${interventionId}`, data);
+  return response.data;
+};
+
+export const deleteIntervention = async (ticketId: string, interventionId: string): Promise<void> => {
+  await axios.delete(`${API_URL}/tickets/${ticketId}/interventions/${interventionId}`);
 };

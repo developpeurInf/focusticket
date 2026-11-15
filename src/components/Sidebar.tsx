@@ -15,7 +15,8 @@ import {
   Clock,
   Shield,
   Laptop,
-  BookOpen
+  BookOpen,
+  Archive
 } from "lucide-react";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -139,6 +140,13 @@ export default function Sidebar({ userRole }: SidebarProps) {
                   badge={resolvedCount > 0 ? resolvedCount.toString() : ""} 
                   onClick={() => navigateToTickets('closed')}
                   active={location.search.includes('filter=closed')}
+                />
+                <SidebarSubItem
+                  icon={<Archive className="text-slate-500" />}
+                  label="Archivés"
+                  badge=""
+                  onClick={() => navigateToTickets('archived')}
+                  active={location.search.includes('filter=archived')}
                 />
               </CollapsibleContent>
             </Collapsible>

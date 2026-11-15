@@ -63,9 +63,30 @@ model Ticket {
   serialNumber String?
   comment      String?
   resolvedAt   DateTime?
+  actionPlan   String?   // Plan d'action initial défini à la création
   comments     Comment[]
+  interventions Intervention[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+// Une étape / intervention réalisée sur un ticket (traçabilité)
+model Intervention {
+  id              String   @id @default(uuid())
+  ticket          Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticketId        String
+  stepNumber      Int      // Numéro de l'étape dans le ticket (1, 2, 3...)
+  performedAt     DateTime @default(now()) // Date et heure de l'intervention
+  technician      String?  // Intervenant (nom)
+  actions         String   // Actions réalisées
+  result          String?  // Constat / résultat obtenu
+  nextSteps       String?  // Prochaines étapes prévues
+  durationMinutes Int?     // Durée de l'intervention en minutes
+  statusAfter     String?  // Statut du ticket après l'intervention
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([ticketId])
 }
 
 model Comment {

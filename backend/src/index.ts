@@ -140,18 +140,129 @@ async function generateTicketNumber(): Promise<string> {
 // ROUTES TICKETS
 // =====================
 
+// Statuts de ticket gérés par l'application
+const TICKET_STATUSES = ['open', 'closed', 'archived'];
+
+// Lit un paramètre de requête multi-valeurs : ?x=a&x=b, ?x[]=a&x[]=b ou ?x=a,b
+function readListParam(query: any, key: string): string[] {
+  const raw = query[key] ?? query[`${key}[]`];
+  if (raw === undefined || raw === null || raw === '') return [];
+  const values = Array.isArray(raw) ? raw : [raw];
+  return values
+    .flatMap((v: any) => String(v).split(','))
+    .map((v: string) => v.trim())
+    .filter((v: string) => v !== '');
+}
+
+// Lit une date de requête (AAAA-MM-JJ). endOfDay inclut toute la journée.
+function readDateParam(value: any, endOfDay = false): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(String(value));
+  if (isNaN(date.getTime())) return undefined;
+  if (endOfDay) date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+// Construit le filtre Prisma des tickets à partir des paramètres de requête
+function buildTicketWhere(query: any) {
+  const and: any[] = [];
+
+  const search = String(query.search || '').trim();
+  if (search) {
+    and.push({
+      OR: [
+        { ticketNumber: { contains: search, mode: 'insensitive' } },
+        { title: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } },
+        { equipment: { contains: search, mode: 'insensitive' } },
+        { serialNumber: { contains: search, mode: 'insensitive' } },
+        { site: { contains: search, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  // Statut : les tickets archivés sont masqués sauf s'ils sont demandés explicitement
+  const status = readListParam(query, 'status');
+  if (status.length > 0) {
+    and.push({ status: { in: status } });
+  } else if (String(query.includeArchived) !== 'true') {
+    and.push({ status: { not: 'archived' } });
+  }
+
+  const priority = readListParam(query, 'priority');
+  if (priority.length > 0) and.push({ priority: { in: priority } });
+
+  const category = readListParam(query, 'category');
+  if (category.length > 0) and.push({ category: { in: category } });
+
+  const site = readListParam(query, 'site');
+  if (site.length > 0) and.push({ site: { in: site } });
+
+  // Intervenant : ids d'utilisateurs, ou "none" pour les tickets non attribués
+  const assignee = readListParam(query, 'assigneeId');
+  if (assignee.length > 0) {
+    const ids = assignee.filter(a => a !== 'none');
+    const or: any[] = [];
+    if (ids.length > 0) or.push({ assigneeId: { in: ids } });
+    if (assignee.includes('none')) or.push({ assigneeId: null });
+    and.push({ OR: or });
+  }
+
+  const creator = readListParam(query, 'creatorId');
+  if (creator.length > 0) and.push({ creatorId: { in: creator } });
+
+  const equipment = String(query.equipment || '').trim();
+  if (equipment) and.push({ equipment: { contains: equipment, mode: 'insensitive' } });
+
+  const serialNumber = String(query.serialNumber || '').trim();
+  if (serialNumber) and.push({ serialNumber: { contains: serialNumber, mode: 'insensitive' } });
+
+  const createdFrom = readDateParam(query.createdFrom);
+  const createdTo = readDateParam(query.createdTo, true);
+  if (createdFrom || createdTo) {
+    and.push({ createdAt: { ...(createdFrom && { gte: createdFrom }), ...(createdTo && { lte: createdTo }) } });
+  }
+
+  const resolvedFrom = readDateParam(query.resolvedFrom);
+  const resolvedTo = readDateParam(query.resolvedTo, true);
+  if (resolvedFrom || resolvedTo) {
+    and.push({ resolvedAt: { ...(resolvedFrom && { gte: resolvedFrom }), ...(resolvedTo && { lte: resolvedTo }) } });
+  }
+
+  return and.length > 0 ? { AND: and } : {};
+}
+
+// GET valeurs disponibles pour les filtres de la page Tickets
+app.get('/api/tickets/filter-options', async (_req, res) => {
+  try {
+    const [sites, categories, priorities, assignees, creators] = await Promise.all([
+      prisma.ticket.findMany({ where: { site: { not: null } }, distinct: ['site'], select: { site: true }, orderBy: { site: 'asc' } }),
+      prisma.ticket.findMany({ where: { category: { not: null } }, distinct: ['category'], select: { category: true }, orderBy: { category: 'asc' } }),
+      prisma.ticket.findMany({ distinct: ['priority'], select: { priority: true } }),
+      prisma.user.findMany({ where: { assignedTickets: { some: {} } }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+      prisma.user.findMany({ where: { createdTickets: { some: {} } }, select: { id: true, name: true }, orderBy: { name: 'asc' } }),
+    ]);
+
+    res.json({
+      statuses: TICKET_STATUSES,
+      sites: sites.map(s => s.site).filter((s): s is string => !!s && s !== '-'),
+      categories: categories.map(c => c.category).filter((c): c is string => !!c),
+      priorities: priorities.map(p => p.priority).filter(Boolean),
+      assignees,
+      creators,
+    });
+  } catch (error) {
+    console.error('Error fetching ticket filter options:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des options de filtre' });
+  }
+});
+
 // GET tous les tickets avec pagination et filtres
 app.get('/api/tickets', async (req, res) => {
   try {
-    const { 
-      page = 1, 
-      limit = 13, 
-      search = '', 
-      status, 
-      priority, 
-      category,
-      creatorId,
-      assigneeId,
+    const {
+      page = 1,
+      limit = 13,
       sortBy = 'createdAt',
       sortOrder = 'desc'
     } = req.query;
@@ -159,32 +270,27 @@ app.get('/api/tickets', async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
     const take = Number(limit);
 
-    // Initialisation du filtre
-    const where: any = {};
-
-    if (search) {
-      where.OR = [
-        { ticketNumber: { contains: String(search), mode: 'insensitive' } },
-        { title: { contains: String(search), mode: 'insensitive' } },
-        { description: { contains: String(search), mode: 'insensitive' } },
-      ];
-    }
+    const where: any = buildTicketWhere(req.query);
 
     // Gestion des tris autorisés
     const validSortFields = ['ticketNumber', 'createdAt', 'resolvedAt', 'priority', 'status'];
     const finalSortBy = validSortFields.includes(String(sortBy)) ? String(sortBy) : 'createdAt';
     const finalSortOrder = String(sortOrder).toLowerCase() === 'asc' ? 'asc' : 'desc';
 
-    if (status) where.status = typeof status === 'string' ? status : { in: status as string[] };
-    if (priority) where.priority = typeof priority === 'string' ? priority : { in: priority as string[] };
-    if (category) where.category = typeof category === 'string' ? category : { in: category as string[] };
-    if (creatorId) where.creatorId = String(creatorId);
-    if (assigneeId) where.assigneeId = String(assigneeId);
-
     const [tickets, total] = await Promise.all([
       prisma.ticket.findMany({
         where,
-        include: { creator: true, assignee: true, asset: true, comments: { include: { author: true } } },
+        include: {
+          creator: true,
+          assignee: true,
+          asset: true,
+          comments: { include: { author: true } },
+          // Les interventions détaillées ne sont chargées que sur demande (export détaillé)
+          ...(String(req.query.includeInterventions) === 'true'
+            ? { interventions: { orderBy: { stepNumber: 'asc' as const } } }
+            : {}),
+          _count: { select: { interventions: true } },
+        },
         orderBy: { [finalSortBy]: finalSortOrder },
         skip,
         take,
@@ -212,7 +318,7 @@ app.post('/api/tickets', async (req, res) => {
   const { 
     ticketNumber: providedNumber, title, subject, description, category, priority, 
     status: providedStatus, createdBy, assignedTo, equipment, assetId, site, 
-    actions, comment, resolvedAt, createdAt 
+    actions, comment, resolvedAt, createdAt, actionPlan 
   } = req.body;
   
   try {
@@ -332,6 +438,8 @@ app.post('/api/tickets', async (req, res) => {
       status = 'closed';
     } else if (sLower === 'en cours' || sLower === 'in-progress') {
       status = 'in-progress';
+    } else if (sLower === 'archivé' || sLower === 'archive' || sLower === 'archived') {
+      status = 'archived';
     } else {
       status = 'open';
     }
@@ -348,6 +456,7 @@ app.post('/api/tickets', async (req, res) => {
         equipment: finalEquipment || undefined,
         site: site || undefined,
         actions: actions || undefined,
+        actionPlan: actionPlan || undefined,
         assigneeId: assigneeId || null,
         assetId: resolvedAssetId,
         comment: comment || undefined,
@@ -366,6 +475,7 @@ app.post('/api/tickets', async (req, res) => {
         equipment: finalEquipment || 'N/A',
         site: site || null,
         actions: actions || null,
+        actionPlan: actionPlan || null,
         creatorId,
         assigneeId: assigneeId || null,
         assetId: resolvedAssetId,
@@ -402,7 +512,7 @@ app.post('/api/tickets', async (req, res) => {
 // PUT modifier un ticket
 app.put('/api/tickets/:id', async (req, res) => {
   const { id } = req.params;
-  const { title, description, status, priority, category, site, actions, assignedTo, assetId, equipment, comment, resolvedAt } = req.body;
+  const { title, description, status, priority, category, site, actions, assignedTo, assetId, equipment, comment, resolvedAt, actionPlan } = req.body;
   try {
     let assigneeId: string | undefined | null = undefined;
     if (assignedTo === '' || assignedTo === 'none') {
@@ -425,11 +535,18 @@ app.put('/api/tickets/:id', async (req, res) => {
     const data: any = {};
     if (title !== undefined) data.title = title;
     if (description !== undefined) data.description = description;
-    if (status !== undefined) data.status = status;
+    if (status !== undefined) {
+      // 'in-progress' et 'resolved' restent acceptés pour les anciens tickets
+      if (![...TICKET_STATUSES, 'in-progress', 'resolved'].includes(status)) {
+        return res.status(400).json({ error: `Statut invalide : ${status}` });
+      }
+      data.status = status;
+    }
     if (priority !== undefined) data.priority = priority;
     if (category !== undefined) data.category = category;
     if (site !== undefined) data.site = site;
     if (actions !== undefined) data.actions = actions;
+    if (actionPlan !== undefined) data.actionPlan = actionPlan || null;
     if (assigneeId !== undefined) data.assigneeId = assigneeId;
     if (resolvedAssetId !== undefined) data.assetId = resolvedAssetId;
     if (comment !== undefined) data.comment = comment;
@@ -481,6 +598,119 @@ app.delete('/api/tickets/:id', async (req, res) => {
   } catch (error: any) {
     console.error('Erreur suppression ticket:', error);
     res.status(500).json({ error: 'Erreur lors de la suppression', details: error.message });
+  }
+});
+
+// =====================
+// ROUTES INTERVENTIONS (étapes successives d'un ticket)
+// =====================
+
+// Transforme les champs reçus en données d'intervention valides
+function parseInterventionBody(body: any) {
+  const data: any = {};
+  if (body.performedAt !== undefined) {
+    const d = new Date(body.performedAt);
+    if (!isNaN(d.getTime())) data.performedAt = d;
+  }
+  if (body.technician !== undefined) data.technician = String(body.technician || '').trim() || null;
+  if (body.actions !== undefined) data.actions = String(body.actions || '').trim();
+  if (body.result !== undefined) data.result = String(body.result || '').trim() || null;
+  if (body.nextSteps !== undefined) data.nextSteps = String(body.nextSteps || '').trim() || null;
+  if (body.durationMinutes !== undefined) {
+    const n = parseInt(body.durationMinutes, 10);
+    data.durationMinutes = isNaN(n) || n < 0 ? null : n;
+  }
+  if (body.statusAfter !== undefined) {
+    data.statusAfter = TICKET_STATUSES.includes(body.statusAfter) ? body.statusAfter : null;
+  }
+  return data;
+}
+
+// Applique au ticket le statut choisi après l'intervention
+async function applyStatusAfter(ticketId: string, statusAfter: string | null | undefined, performedAt?: Date) {
+  if (!statusAfter) return;
+  const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+  if (!ticket || ticket.status === statusAfter) return;
+  const data: any = { status: statusAfter };
+  if (statusAfter === 'closed' && !ticket.resolvedAt) data.resolvedAt = performedAt || new Date();
+  if (statusAfter === 'open') data.resolvedAt = null;
+  await prisma.ticket.update({ where: { id: ticketId }, data });
+}
+
+// GET liste des interventions d'un ticket, dans l'ordre des étapes
+app.get('/api/tickets/:id/interventions', async (req, res) => {
+  try {
+    const interventions = await prisma.intervention.findMany({
+      where: { ticketId: req.params.id },
+      orderBy: { stepNumber: 'asc' },
+    });
+    res.json(interventions);
+  } catch (error) {
+    console.error('Erreur lecture interventions:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des interventions' });
+  }
+});
+
+// POST ajouter une intervention (nouvelle étape)
+app.post('/api/tickets/:id/interventions', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const data = parseInterventionBody(req.body);
+    if (!data.actions) return res.status(400).json({ error: 'Les actions réalisées sont obligatoires.' });
+
+    const ticket = await prisma.ticket.findUnique({ where: { id } });
+    if (!ticket) return res.status(404).json({ error: 'Ticket introuvable.' });
+
+    const last = await prisma.intervention.findFirst({ where: { ticketId: id }, orderBy: { stepNumber: 'desc' } });
+    const intervention = await prisma.intervention.create({
+      data: { ...data, ticketId: id, stepNumber: (last?.stepNumber ?? 0) + 1 },
+    });
+
+    await applyStatusAfter(id, intervention.statusAfter, intervention.performedAt);
+    res.status(201).json(intervention);
+  } catch (error: any) {
+    console.error('Erreur création intervention:', error);
+    res.status(500).json({ error: "Erreur lors de l'ajout de l'intervention", details: error.message });
+  }
+});
+
+// PUT modifier une intervention
+app.put('/api/tickets/:id/interventions/:interventionId', async (req, res) => {
+  const { id, interventionId } = req.params;
+  try {
+    const data = parseInterventionBody(req.body);
+    if (data.actions === '') return res.status(400).json({ error: 'Les actions réalisées sont obligatoires.' });
+
+    const existing = await prisma.intervention.findFirst({ where: { id: interventionId, ticketId: id } });
+    if (!existing) return res.status(404).json({ error: 'Intervention introuvable.' });
+
+    const intervention = await prisma.intervention.update({ where: { id: interventionId }, data });
+    if (data.statusAfter !== undefined) await applyStatusAfter(id, intervention.statusAfter, intervention.performedAt);
+    res.json(intervention);
+  } catch (error: any) {
+    console.error('Erreur modification intervention:', error);
+    res.status(500).json({ error: "Erreur lors de la modification de l'intervention", details: error.message });
+  }
+});
+
+// DELETE supprimer une intervention, puis renuméroter les étapes suivantes
+app.delete('/api/tickets/:id/interventions/:interventionId', async (req, res) => {
+  const { id, interventionId } = req.params;
+  try {
+    const existing = await prisma.intervention.findFirst({ where: { id: interventionId, ticketId: id } });
+    if (!existing) return res.status(404).json({ error: 'Intervention introuvable.' });
+
+    await prisma.$transaction([
+      prisma.intervention.delete({ where: { id: interventionId } }),
+      prisma.intervention.updateMany({
+        where: { ticketId: id, stepNumber: { gt: existing.stepNumber } },
+        data: { stepNumber: { decrement: 1 } },
+      }),
+    ]);
+    res.status(204).send();
+  } catch (error: any) {
+    console.error('Erreur suppression intervention:', error);
+    res.status(500).json({ error: "Erreur lors de la suppression de l'intervention", details: error.message });
   }
 });
 

@@ -15,6 +15,8 @@ import {
 import { mockUsers } from "@/data/mockUsers";
 import { generateTicketPDF } from "@/utils/exportUtils";
 import { FileText } from "lucide-react";
+import TicketInterventions from "@/components/tickets/TicketInterventions";
+import { getTicketStatusConfig, TICKET_PRIORITY_LABELS } from "@/lib/ticketStatus";
 
 interface TicketDetailsProps {
   ticket: Ticket;
@@ -29,7 +31,7 @@ export default function TicketDetails({
   onAssign,
   userRole = 'agent'
 }: TicketDetailsProps) {
-  const [status, setStatus] = useState<'open' | 'in-progress' | 'resolved' | 'closed'>(ticket.status as any);
+  const [status, setStatus] = useState<'open' | 'in-progress' | 'resolved' | 'closed' | 'archived'>(ticket.status as any);
   
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -40,6 +42,8 @@ export default function TicketDetails({
       case 'resolved':
       case 'closed':
         return 'bg-green-500';
+      case 'archived':
+        return 'bg-slate-500';
       default:
         return 'bg-blue-500';
     }
@@ -63,7 +67,7 @@ export default function TicketDetails({
   };
 
   const handleStatusChange = (newStatus: string) => {
-    const typedStatus = newStatus as 'open' | 'in-progress' | 'resolved' | 'closed';
+    const typedStatus = newStatus as 'open' | 'in-progress' | 'resolved' | 'closed' | 'archived';
     setStatus(typedStatus);
     onStatusChange(newStatus);
   };
@@ -77,7 +81,7 @@ export default function TicketDetails({
               {ticket.ticketNumber || ticket.id}
             </h3>
             <Badge className={getStatusColor(status || 'open')}>
-              {String(status || 'OUVERT').replace('-', ' ').toUpperCase()}
+              {getTicketStatusConfig(status).label.toUpperCase()}
             </Badge>
           </div>
           <h2 className="text-2xl font-bold text-slate-900">{ticket.subject}</h2>
@@ -85,7 +89,7 @@ export default function TicketDetails({
             <span>Ouvert le : {formatDate(ticket.createdAt)}</span>
             <span>•</span>
             <span className="font-semibold uppercase text-[11px] bg-slate-100 px-2 py-0.5 rounded">
-              Priorité : {ticket.priority}
+              Priorité : {TICKET_PRIORITY_LABELS[String(ticket.priority).toLowerCase()] ?? ticket.priority}
             </span>
             <span>•</span>
             <span>Site : {ticket.site}</span>
@@ -117,13 +121,20 @@ export default function TicketDetails({
           </div>
         </div>
 
+        <Separator />
+        <TicketInterventions
+          ticket={ticket}
+          canEdit={userRole === 'admin' || userRole === 'agent'}
+          onStatusChanged={(s) => setStatus(s as any)}
+        />
+
         {ticket.actions && (
           <>
             <Separator />
             <div>
               <h3 className="font-bold text-slate-800 mb-2 flex items-center gap-2 text-emerald-700">
                 <span className="h-4 w-1 bg-emerald-500 rounded-full"></span>
-                Log d'Intervention / Action(s) menée(s)
+                Action(s) menée(s) (résumé)
               </h3>
               <div className="text-sm border border-emerald-100 rounded-md p-4 bg-emerald-50/30 text-emerald-900 leading-relaxed whitespace-pre-wrap italic">
                 {ticket.actions}
@@ -153,7 +164,7 @@ export default function TicketDetails({
           <>
             <div className="space-y-3 rounded-xl border-2 border-slate-100 p-5 bg-white shadow-sm">
               <h3 className="font-bold text-sm text-slate-900">Gestion du statut</h3>
-              <Select defaultValue={status} onValueChange={handleStatusChange}>
+              <Select value={status} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Choisir un statut" />
                 </SelectTrigger>
@@ -162,6 +173,7 @@ export default function TicketDetails({
                     <SelectLabel>Statut</SelectLabel>
                     <SelectItem value="open">Ouvert</SelectItem>
                     <SelectItem value="closed">Clôturé</SelectItem>
+                    <SelectItem value="archived">Archivé</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

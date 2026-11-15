@@ -1,6 +1,6 @@
 import { User } from "./user";
 
-export type TicketStatus = 'open' | 'in-progress' | 'closed';
+export type TicketStatus = 'open' | 'in-progress' | 'closed' | 'archived';
 export type TicketPriority = 'low' | 'medium' | 'high' | 'critical';
 export type TicketCategory = 'hardware' | 'software' | 'network' | 'access' | 'other';
 
@@ -30,6 +30,25 @@ export interface Ticket {
   resolvedAt: string | null;
   updatedAt: string;
   comments?: Comment[];
+  actionPlan?: string | null;
+  interventionsCount?: number;
+  interventions?: Intervention[];
+}
+
+// Une étape / intervention réalisée sur un ticket
+export interface Intervention {
+  id: string;
+  ticketId: string;
+  stepNumber: number;
+  performedAt: string;
+  technician: string | null;
+  actions: string;
+  result: string | null;
+  nextSteps: string | null;
+  durationMinutes: number | null;
+  statusAfter: TicketStatus | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface TicketResponse {

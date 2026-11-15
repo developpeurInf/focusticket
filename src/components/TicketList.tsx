@@ -35,14 +35,29 @@ import {
   ArrowUpDown,
   Download,
   SortDesc,
-  SortAsc
+  SortAsc,
+  Filter,
+  Archive,
+  ChevronDown,
+  FileSpreadsheet,
+  ListTree
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import TicketDetails from "@/components/TicketDetails";
 import CreateTicketForm from "./CreateTicketForm";
 import { Ticket } from "@/types/ticket";
 import { useToast } from "@/components/ui/use-toast";
 import { processImportedTickets } from "@/utils/exportUtils";
-import { getTickets, deleteTicket, createTicket, exportTickets } from "@/data/ticketService";
+import { getTickets, deleteTicket, createTicket, exportTickets, updateTicket, getTicketFilterOptions, TicketFilterOptions } from "@/data/ticketService";
+import TicketFilters, { ActiveFilterChips, EMPTY_TICKET_FILTERS, TicketFilterState, countActiveFilters, describeFilters, filtersToParams } from "@/components/tickets/TicketFilters";
+import { getTicketStatusConfig, normalizeTicketStatus } from "@/lib/ticketStatus";
 import { addNotification } from "@/utils/notificationUtils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -64,9 +79,10 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
   const [totalTickets, setTotalTickets] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [priorityFilter, setPriorityFilter] = useState<string[]>([]);
-  const [categoryFilter, setCategoryFilter] = useState<string[]>([]);
+  const [filters, setFilters] = useState<TicketFilterState>(EMPTY_TICKET_FILTERS);
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterOptions, setFilterOptions] = useState<TicketFilterOptions | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -85,11 +101,31 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
     setCurrentPage(1);
   };
 
+  const activeFilterCount = countActiveFilters(filters);
+
+  // Toute modification d'un filtre ramène à la première page
+  const updateFilters = (next: TicketFilterState) => {
+    setFilters(next);
+    setCurrentPage(1);
+  };
+
   const currentFilters = {
-    search: searchQuery,
-    status: statusFilter,
-    priority: priorityFilter,
-    category: categoryFilter
+    search: searchQuery || undefined,
+    ...filtersToParams(filters)
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = async (kind: 'synthese' | 'detaille') => {
+    setIsExporting(true);
+    try {
+      const fileName = await exportTickets(kind, currentFilters, describeFilters(filters, filterOptions, searchQuery));
+      toast({ title: "Export Excel prêt", description: `Le fichier ${fileName} a été téléchargé.` });
+    } catch (error) {
+      console.error("Export Excel failed", error);
+      toast({ title: "Échec de l'export Excel", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const statusMap: Record<string, string> = {
@@ -101,19 +137,19 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
     'closed': 'closed',
     'Clôturé': 'closed',
     'Résolu': 'closed',
-    'resolved': 'closed'
+    'resolved': 'closed',
+    'archived': 'archived',
+    'archivé': 'archived',
+    'Archivé': 'archived'
   };
 
   useEffect(() => {
-    if (initialStatusFilter === "all" || initialStatusFilter === "") {
-      setStatusFilter([]);
-      setCurrentPage(1);
-    } else if (initialStatusFilter === "assigned") {
-      setStatusFilter([]);
+    if (initialStatusFilter === "all" || initialStatusFilter === "" || initialStatusFilter === "assigned") {
+      setFilters(f => ({ ...f, status: [] }));
       setCurrentPage(1);
     } else if (initialStatusFilter) {
       const normalized = statusMap[initialStatusFilter] || initialStatusFilter;
-      setStatusFilter([normalized]);
+      setFilters(f => ({ ...f, status: [normalized] }));
       setCurrentPage(1);
     }
   }, [initialStatusFilter]);
@@ -124,34 +160,28 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
       // On prépare les statuts. On utilise statusFilter s'il n'est pas vide.
       // Sinon on se base sur initialStatusFilter pour une synchronisation immédiate.
       const getEffectiveStatus = () => {
-        if (statusFilter && statusFilter.length > 0) return statusFilter;
-        if (initialStatusFilter && initialStatusFilter !== "all" && initialStatusFilter !== "assigned") {
-           const normalized = statusMap[initialStatusFilter] || initialStatusFilter;
-           return [normalized];
-        }
+        // Le filtre venant du menu latéral est recopié dans filters.status (voir l'effet ci-dessus)
+        if (filters.status.length > 0) return filters.status;
         return undefined;
       };
 
       const finalStatus = getEffectiveStatus();
 
-      const filters: any = {
+      const params: any = {
         page: currentPage,
         limit: itemsPerPage,
-        search: searchQuery || undefined,
-        // Si un seul statut, on l'envoie comme chaîne, sinon comme tableau (ou undefined)
-        status: (finalStatus && finalStatus.length === 1) ? finalStatus[0] : (finalStatus && finalStatus.length > 0 ? finalStatus : undefined),
-        priority: (priorityFilter && priorityFilter.length > 0) ? priorityFilter : undefined,
-        category: (categoryFilter && categoryFilter.length > 0) ? categoryFilter : undefined,
+        ...currentFilters,
+        status: finalStatus && finalStatus.length > 0 ? finalStatus.join(",") : undefined,
         sortBy,
         sortOrder
       };
 
       // Si c'est un agent et filtre "assigned"
       if (userRole === 'agent' && initialStatusFilter === 'assigned') {
-        filters.assigneeId = 'current-user';
+        params.assigneeId = 'current-user';
       }
 
-      const result = await getTickets(filters);
+      const result = await getTickets(params);
       setAllTickets(result.tickets);
       setTotalTickets(result.pagination.total);
       setTotalPages(result.pagination.pages);
@@ -166,11 +196,19 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
 
   useEffect(() => {
     loadTickets();
-  }, [currentPage, itemsPerPage, searchQuery, statusFilter, priorityFilter, categoryFilter, userRole, sortBy, sortOrder]);
+  }, [currentPage, itemsPerPage, searchQuery, filters, userRole, sortBy, sortOrder, reloadKey]);
+
+  // Valeurs proposées dans les filtres (sites, intervenants, demandeurs...)
+  useEffect(() => {
+    getTicketFilterOptions()
+      .then(setFilterOptions)
+      .catch(err => console.error("Filter options error:", err));
+  }, [reloadKey]);
 
   useEffect(() => {
-    window.addEventListener('tickets-updated', loadTickets);
-    return () => window.removeEventListener('tickets-updated', loadTickets);
+    const reload = () => setReloadKey(k => k + 1);
+    window.addEventListener('tickets-updated', reload);
+    return () => window.removeEventListener('tickets-updated', reload);
   }, []);
 
   // On garde filteredTickets pointant sur allTickets pour la compatibilité avec le reste du code
@@ -190,12 +228,19 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
   };
 
 
-  const handleStatusChange = (newStatus: string) => {
-    if (selectedTicket) {
+  const handleStatusChange = async (newStatus: string) => {
+    if (!selectedTicket) return;
+    try {
+      await updateTicket(selectedTicket.id, { status: newStatus });
+      setSelectedTicket({ ...selectedTicket, status: normalizeTicketStatus(newStatus) });
       toast({
         title: "Statut mis à jour",
-        description: `Le ticket ${selectedTicket.id} a été mis à jour vers ${newStatus}`,
+        description: `Le ticket ${selectedTicket.ticketNumber || selectedTicket.id} est maintenant « ${getTicketStatusConfig(newStatus).label} ».`,
       });
+      setReloadKey(k => k + 1);
+    } catch (error) {
+      console.error("Status update error:", error);
+      toast({ title: "Échec de la mise à jour du statut", variant: "destructive" });
     }
   };
 
@@ -313,9 +358,22 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
             </div>
 
 
+            <Button
+              variant={showFilters || activeFilterCount > 0 ? "default" : "outline"}
+              className="gap-2"
+              onClick={() => setShowFilters(v => !v)}
+              aria-expanded={showFilters}
+            >
+              <Filter className="h-4 w-4" />
+              Filtres
+              {activeFilterCount > 0 && (
+                <span className="rounded-full bg-background/90 px-1.5 text-[11px] font-bold text-primary">{activeFilterCount}</span>
+              )}
+            </Button>
+
             <div className="relative">
-              <input 
-                type="file" 
+              <input
+                type="file"
                 accept=".csv, .xlsx, .xls" 
                 onChange={handleImport} 
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
@@ -326,14 +384,33 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
               </Button>
             </div>
 
-            <Button 
-              variant="outline" 
-              className="flex items-center gap-2 h-10 border-blue-200 text-blue-700 font-bold bg-blue-50/50 hover:bg-blue-100 transition-all rounded-xl"
-              onClick={() => exportTickets('excel', currentFilters)}
-            >
-              <Download className="h-4 w-4" />
-              Exporter Excel
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={isExporting}
+                  className="flex items-center gap-2 h-10 border-blue-200 text-blue-700 font-bold bg-blue-50/50 hover:bg-blue-100 transition-all rounded-xl"
+                >
+                  {isExporting ? <Activity className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+                  Exporter Excel
+                  <ChevronDown className="h-3 w-3 opacity-70" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuLabel className="text-xs text-muted-foreground">
+                  {activeFilterCount > 0 || searchQuery ? "Export des tickets filtrés" : "Export de tous les tickets (hors archivés)"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="flex-col items-start gap-0.5 py-2" onClick={() => handleExport('synthese')}>
+                  <span className="flex items-center gap-2 font-semibold"><FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Version synthèse</span>
+                  <span className="pl-6 text-xs text-muted-foreground">Une ligne par ticket, toutes les informations</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="flex-col items-start gap-0.5 py-2" onClick={() => handleExport('detaille')}>
+                  <span className="flex items-center gap-2 font-semibold"><ListTree className="h-4 w-4 text-blue-600" /> Version détaillée</span>
+                  <span className="pl-6 text-xs text-muted-foreground">Synthèse + historique de chaque intervention, étape par étape</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {selectedIds.length > 0 && (
               <Button 
@@ -372,6 +449,19 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
               </DialogContent>
             </Dialog>
           </div>
+        </div>
+        {showFilters && (
+          <div className="pt-4">
+            <TicketFilters value={filters} onChange={updateFilters} options={filterOptions} />
+          </div>
+        )}
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3">
+          <ActiveFilterChips value={filters} onChange={updateFilters} options={filterOptions} />
+          {activeFilterCount > 0 && (
+            <span className="text-xs text-muted-foreground ml-auto">
+              <span className="font-bold text-foreground">{totalTickets}</span> ticket(s) correspondant(s)
+            </span>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -451,16 +541,23 @@ export default function TicketList({ userRole, initialStatusFilter = "" }: Ticke
               {paginatedTickets.length > 0 ? (
                 paginatedTickets.map((ticket) => {
                   if (!ticket) return null;
-                  const statusInfo = (ticket.status === 'closed' || (ticket.status as any) === 'resolved' || (ticket.status as any) === 'Résolu' || (ticket.status as any) === 'Clôturé') 
-                    ? { label: 'CLÔTURÉ', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', icon: <CheckCircle2 className="h-3 w-3" /> }
-                    : { label: 'OUVERT', color: 'bg-sky-100 text-sky-800 border-sky-200', icon: <XCircle className="h-3 w-3" /> };
+                  const normalizedStatus = normalizeTicketStatus(ticket.status);
+                  const statusConfig = getTicketStatusConfig(normalizedStatus);
+                  const statusInfo = {
+                    label: statusConfig.label.toUpperCase(),
+                    color: statusConfig.badgeClass,
+                    icon: normalizedStatus === 'closed' ? <CheckCircle2 className="h-3 w-3" />
+                      : normalizedStatus === 'archived' ? <Archive className="h-3 w-3" />
+                      : <XCircle className="h-3 w-3" />
+                  };
 
                   return (
                   <TableRow 
                     key={ticket.id} 
                     className={cn(
                       "group cursor-pointer hover:bg-primary/5 transition-all duration-200 border-b border-border/50 hover:shadow-sm",
-                      selectedIds.includes(ticket.id) && "bg-primary/5"
+                      selectedIds.includes(ticket.id) && "bg-primary/5",
+                      normalizedStatus === 'archived' && "opacity-70"
                     )}
                     onClick={() => {
                       setSelectedTicket(ticket);
