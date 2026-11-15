@@ -49,8 +49,11 @@ function isSameHost(origin: string, req: any): boolean {
   }
 }
 
+// En local (développement), le frontend Vite peut tourner sur n'importe quel port
+const isLocalDevOrigin = (origin: string) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
 const isOriginAllowed = (origin: string | undefined, req: any) =>
-  !origin || allowedOrigins.includes(origin) || isSameHost(origin, req);
+  !origin || allowedOrigins.includes(origin) || isLocalDevOrigin(origin) || isSameHost(origin, req);
 
 // Origine inconnue : requête refusée proprement (403) au lieu d'une erreur 500
 app.use((req: any, res: any, next: any) => {
@@ -303,7 +306,7 @@ app.get('/api/tickets', async (req, res) => {
           comments: { include: { author: true } },
           // Les interventions détaillées ne sont chargées que sur demande (export détaillé)
           ...(String(req.query.includeInterventions) === 'true'
-            ? { interventions: { orderBy: { stepNumber: 'asc' as const } } }
+            ? { interventions: { orderBy: { stepNumber: 'asc' as const }, include: interventionInclude } }
             : {}),
           _count: { select: { interventions: true } },
         },
@@ -642,6 +645,41 @@ function parseInterventionBody(body: any) {
   return data;
 }
 
+// Rôles des utilisateurs pouvant intervenir sur un ticket
+const TECHNICIAN_ROLES = ['intervenant', 'tech', 'admin'];
+
+// Champs des intervenants renvoyés avec chaque intervention
+const interventionInclude = { technicians: { select: { id: true, name: true }, orderBy: { name: 'asc' as const } } };
+
+// Ajoute à data la liste des intervenants (plusieurs possibles) à partir de technicianIds.
+// Le champ texte "technician" garde les noms, séparés par des virgules, pour l'affichage et l'export.
+async function applyTechnicians(body: any, data: any, mode: 'create' | 'update') {
+  if (!Array.isArray(body.technicianIds)) return;
+  const ids = Array.from(new Set(body.technicianIds.map((x: any) => String(x)).filter(Boolean))) as string[];
+  const users = ids.length
+    ? await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true }, orderBy: { name: 'asc' } })
+    : [];
+  data.technicians = mode === 'create'
+    ? { connect: users.map(u => ({ id: u.id })) }
+    : { set: users.map(u => ({ id: u.id })) };
+  data.technician = users.map(u => u.name).join(', ') || null;
+}
+
+// GET liste des intervenants possibles (utilisateurs au rôle intervenant / technicien / admin)
+app.get('/api/technicians', async (_req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { role: { in: TECHNICIAN_ROLES }, status: { not: 'inactive' } },
+      select: { id: true, name: true, role: true },
+      orderBy: { name: 'asc' },
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Erreur lecture intervenants:', error);
+    res.status(500).json({ error: 'Erreur lors de la récupération des intervenants' });
+  }
+});
+
 // Applique au ticket le statut choisi après l'intervention
 async function applyStatusAfter(ticketId: string, statusAfter: string | null | undefined, performedAt?: Date) {
   if (!statusAfter) return;
@@ -659,6 +697,7 @@ app.get('/api/tickets/:id/interventions', async (req, res) => {
     const interventions = await prisma.intervention.findMany({
       where: { ticketId: req.params.id },
       orderBy: { stepNumber: 'asc' },
+      include: interventionInclude,
     });
     res.json(interventions);
   } catch (error) {
@@ -677,9 +716,11 @@ app.post('/api/tickets/:id/interventions', async (req, res) => {
     const ticket = await prisma.ticket.findUnique({ where: { id } });
     if (!ticket) return res.status(404).json({ error: 'Ticket introuvable.' });
 
+    await applyTechnicians(req.body, data, 'create');
     const last = await prisma.intervention.findFirst({ where: { ticketId: id }, orderBy: { stepNumber: 'desc' } });
     const intervention = await prisma.intervention.create({
       data: { ...data, ticketId: id, stepNumber: (last?.stepNumber ?? 0) + 1 },
+      include: interventionInclude,
     });
 
     await applyStatusAfter(id, intervention.statusAfter, intervention.performedAt);
@@ -700,7 +741,8 @@ app.put('/api/tickets/:id/interventions/:interventionId', async (req, res) => {
     const existing = await prisma.intervention.findFirst({ where: { id: interventionId, ticketId: id } });
     if (!existing) return res.status(404).json({ error: 'Intervention introuvable.' });
 
-    const intervention = await prisma.intervention.update({ where: { id: interventionId }, data });
+    await applyTechnicians(req.body, data, 'update');
+    const intervention = await prisma.intervention.update({ where: { id: interventionId }, data, include: interventionInclude });
     if (data.statusAfter !== undefined) await applyStatusAfter(id, intervention.statusAfter, intervention.performedAt);
     res.json(intervention);
   } catch (error: any) {

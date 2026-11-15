@@ -41,7 +41,8 @@ export interface Intervention {
   ticketId: string;
   stepNumber: number;
   performedAt: string;
-  technician: string | null;
+  technician: string | null; // noms des intervenants, séparés par des virgules
+  technicians?: { id: string; name: string }[]; // intervenants ayant participé à l'étape
   actions: string;
   result: string | null;
   nextSteps: string | null;

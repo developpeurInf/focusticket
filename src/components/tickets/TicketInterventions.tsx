@@ -13,8 +13,11 @@ import {
   updateIntervention,
   deleteIntervention,
   updateTicket,
+  getTechnicians,
   InterventionInput,
+  Technician,
 } from "@/data/ticketService";
+import MultiSelectFilter from "./MultiSelectFilter";
 import { TICKET_STATUSES, TICKET_STATUS_CONFIG, getTicketStatusConfig } from "@/lib/ticketStatus";
 
 interface TicketInterventionsProps {
@@ -42,7 +45,7 @@ export const formatDuration = (minutes: number | null | undefined) => {
 
 interface FormState {
   performedAt: string;
-  technician: string;
+  technicianIds: string[];
   durationMinutes: string;
   actions: string;
   result: string;
@@ -50,9 +53,9 @@ interface FormState {
   statusAfter: string;
 }
 
-const emptyForm = (technician: string): FormState => ({
+const emptyForm = (technicianIds: string[]): FormState => ({
   performedAt: toLocalInput(new Date()),
-  technician,
+  technicianIds,
   durationMinutes: "",
   actions: "",
   result: "",
@@ -60,13 +63,26 @@ const emptyForm = (technician: string): FormState => ({
   statusAfter: "",
 });
 
+// Noms des intervenants d'une étape (liste liée, sinon ancien champ texte)
+export const interventionTechnicianNames = (i: Intervention) =>
+  i.technicians && i.technicians.length > 0 ? i.technicians.map(t => t.name).join(", ") : i.technician || "";
+
+// Identifiants des intervenants d'une étape ; pour les anciennes étapes, retrouvés à partir des noms
+const technicianIdsOf = (i: Intervention, technicians: Technician[]) => {
+  if (i.technicians && i.technicians.length > 0) return i.technicians.map(t => t.id);
+  const names = String(i.technician || "").split(",").map(n => n.trim().toLowerCase()).filter(Boolean);
+  return technicians.filter(t => names.includes(t.name.toLowerCase())).map(t => t.id);
+};
+
 function InterventionForm({
   initial,
+  technicians,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial: FormState;
+  technicians: Technician[];
   submitLabel: string;
   onSubmit: (data: InterventionInput) => Promise<void>;
   onCancel: () => void;
@@ -82,7 +98,7 @@ function InterventionForm({
     try {
       await onSubmit({
         performedAt: new Date(form.performedAt).toISOString(),
-        technician: form.technician,
+        technicianIds: form.technicianIds,
         durationMinutes: form.durationMinutes ? Number(form.durationMinutes) : null,
         actions: form.actions,
         result: form.result,
@@ -101,10 +117,13 @@ function InterventionForm({
           <Label className="text-xs">Date et heure</Label>
           <Input type="datetime-local" required value={form.performedAt} onChange={e => set("performedAt", e.target.value)} />
         </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Intervenant</Label>
-          <Input value={form.technician} placeholder="Nom de l'intervenant" onChange={e => set("technician", e.target.value)} />
-        </div>
+        <MultiSelectFilter
+          label="Intervenant(s)"
+          options={technicians.map(t => ({ value: t.id, label: t.name }))}
+          selected={form.technicianIds}
+          onChange={ids => setForm(f => ({ ...f, technicianIds: ids }))}
+          placeholder="Choisir les intervenants"
+        />
         <div className="space-y-1">
           <Label className="text-xs">Durée (minutes)</Label>
           <Input type="number" min={0} step={5} value={form.durationMinutes} placeholder="ex. 45" onChange={e => set("durationMinutes", e.target.value)} />
@@ -159,6 +178,16 @@ export default function TicketInterventions({ ticket, canEdit = true, onStatusCh
   const [plan, setPlan] = useState(ticket.actionPlan || "");
   const [editingPlan, setEditingPlan] = useState(false);
   const [planDraft, setPlanDraft] = useState(plan);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+
+  useEffect(() => {
+    getTechnicians().then(setTechnicians).catch(err => console.error("Technicians load error:", err));
+  }, []);
+
+  // Par défaut, la personne à qui le ticket est attribué est proposée comme intervenant
+  const defaultTechnicianIds = technicians
+    .filter(t => t.id === ticket.assigneeId || (!!ticket.assignedTo && t.name === ticket.assignedTo))
+    .map(t => t.id);
 
   const load = async () => {
     try {
@@ -286,7 +315,8 @@ export default function TicketInterventions({ ticket, canEdit = true, onStatusCh
         {adding && (
           <div className="mb-4">
             <InterventionForm
-              initial={emptyForm(ticket.assignedTo || "")}
+              initial={emptyForm(defaultTechnicianIds)}
+              technicians={technicians}
               submitLabel={`Enregistrer l'étape ${interventions.length + 1}`}
               onSubmit={handleAdd}
               onCancel={() => setAdding(false)}
@@ -317,13 +347,14 @@ export default function TicketInterventions({ ticket, canEdit = true, onStatusCh
                     <InterventionForm
                       initial={{
                         performedAt: toLocalInput(new Date(i.performedAt)),
-                        technician: i.technician || "",
+                        technicianIds: technicianIdsOf(i, technicians),
                         durationMinutes: i.durationMinutes ? String(i.durationMinutes) : "",
                         actions: i.actions,
                         result: i.result || "",
                         nextSteps: i.nextSteps || "",
                         statusAfter: i.statusAfter || "",
                       }}
+                      technicians={technicians}
                       submitLabel="Enregistrer"
                       onSubmit={data => handleUpdate(i.id, data)}
                       onCancel={() => setEditingId(null)}
@@ -333,7 +364,12 @@ export default function TicketInterventions({ ticket, canEdit = true, onStatusCh
                       <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span className="font-bold text-foreground">Étape {i.stepNumber}</span>
                         <span>{formatDateTime(i.performedAt)}</span>
-                        {i.technician && <span className="flex items-center gap-1"><UserIcon className="h-3 w-3" />{i.technician}</span>}
+                        {interventionTechnicianNames(i) && (
+                          <span className="flex items-center gap-1">
+                            <UserIcon className="h-3 w-3" />
+                            {interventionTechnicianNames(i)}
+                          </span>
+                        )}
                         {i.durationMinutes ? <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatDuration(i.durationMinutes)}</span> : null}
                         {status && (
                           <span className={cn("rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase", status.badgeClass)}>

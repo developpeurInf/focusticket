@@ -54,6 +54,7 @@ export const getTickets = async (params: {
         assignedTo: t.assignee ? t.assignee.name : (t.assignedTo || null),
         equipment: t.equipment || (t.asset ? (t.asset.produit || t.asset.name) : "-"),
         assetId: t.assetId,
+        assigneeId: t.assigneeId || null,
         serialNumber: (t.asset && t.asset.serialNumber) ? t.asset.serialNumber : (t.serialNumber || "-"),
         site: t.site || "-",
         actions: t.actions || "",
@@ -119,7 +120,17 @@ export const getTicketFilterOptions = async (): Promise<TicketFilterOptions> => 
 // ===== Interventions (étapes successives d'un ticket) =====
 
 export type InterventionInput = Partial<Pick<Intervention,
-  'performedAt' | 'technician' | 'actions' | 'result' | 'nextSteps' | 'durationMinutes' | 'statusAfter'>>;
+  'performedAt' | 'technician' | 'actions' | 'result' | 'nextSteps' | 'durationMinutes' | 'statusAfter'>> & {
+  technicianIds?: string[]; // intervenants ayant participé (plusieurs possibles)
+};
+
+export interface Technician { id: string; name: string; role: string }
+
+// Utilisateurs pouvant intervenir (rôle intervenant / technicien / admin)
+export const getTechnicians = async (): Promise<Technician[]> => {
+  const response = await axios.get(`${API_URL}/technicians`);
+  return response.data;
+};
 
 export const getInterventions = async (ticketId: string): Promise<Intervention[]> => {
   const response = await axios.get(`${API_URL}/tickets/${ticketId}/interventions`);

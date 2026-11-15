@@ -34,8 +34,8 @@ export default function MultiSelectFilter({ label, options, selected, onChange, 
 
   const summary = selected.length === 0
     ? placeholder
-    : selected.length === 1
-      ? options.find(o => o.value === selected[0])?.label ?? selected[0]
+    : selected.length <= 2
+      ? selected.map(v => options.find(o => o.value === v)?.label ?? v).join(", ")
       : `${selected.length} sélectionnés`;
 
   return (
